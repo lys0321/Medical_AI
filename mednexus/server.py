@@ -33,6 +33,7 @@ from reading import build_reading
 from research_query import build_query_proposal
 import tutor_chat
 import tutor_model
+import text_grading
 
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("MEDNEXUS_DB", str(ROOT / "data" / "learning.sqlite3")))
@@ -98,6 +99,8 @@ def init_db():
         CREATE TABLE IF NOT EXISTS cache(key TEXT PRIMARY KEY, payload TEXT, created REAL);
         CREATE TABLE IF NOT EXISTS tutor_conversations(learner TEXT, token TEXT, payload TEXT NOT NULL,
           PRIMARY KEY(learner,token));
+        CREATE TABLE IF NOT EXISTS text_attempts(id INTEGER PRIMARY KEY, learner TEXT, token TEXT,
+          concept TEXT, question TEXT, payload TEXT NOT NULL, created REAL);
         """)
 
 
@@ -263,6 +266,45 @@ def tutor_turn(learner, body):
             return tutor_snapshot(db, learner, token)
 
 
+def text_excerpts(c, q):
+    """Only the authored learning card and matching local textbook passages are given to the judge."""
+    out = [{'id': 'note-' + c['id'], 'kind': 'learning_card', 'text': c['note']}]
+    try:
+        hits = textbook.search(q['prompt'] + ' ' + ' '.join(p['correct'] for p in q['points']))
+    except Exception:
+        hits = []
+    return out + [{'id': h['id'], 'kind': 'textbook', 'book': h['book'], 'page': h['page'], 'text': h['text'][:1200]}
+                  for h in hits]
+
+
+def answer_text(learner, body):
+    """Judge a free-text answer point by point; stored apart from structured scores."""
+    token, answer = body.get('token'), body.get('answer')
+    if not isinstance(answer, str) or not 2 <= len(answer.strip()) <= 3000:
+        raise InputError('请输入2–3000字的自由文本作答')
+    answer = answer.strip()
+    _check_research_privacy(answer, '自由文本作答')
+    with LOCK, connect() as db:
+        c, q, completed = tutor_context(db, learner, token)
+        if not completed:
+            # Seeing per-point feedback before choosing makes the later choice answer assisted.
+            state = state_get(db, learner)
+            state['active']['text_assisted'] = True
+            state_save(db, learner, state)
+    try:
+        judge = tutor_model.grader()
+    except Exception:
+        judge = None
+    judged = text_grading.grade(q, answer, text_excerpts(c, q), judge)
+    with LOCK, connect() as db:
+        tutor_context(db, learner, token)
+        record = {'concept': c['id'], 'question': q['id'], 'kind': q['kind'], 'answer': answer, **judged}
+        db.execute('INSERT INTO text_attempts(learner,token,concept,question,payload,created) VALUES(?,?,?,?,?,?)',
+                   (learner, token, c['id'], q['id'], json.dumps(record, ensure_ascii=False), time.time()))
+        event(db, learner, 'text-answer', c['id'], {'question': q['id'], 'scorer': judged['scorer']})
+    return {'token': token, 'concept': c['id'], 'question': q['id'], 'kind': q['kind'], **judged}
+
+
 def make_task(db, learner, cid, kind="auto"):
     c = CONCEPT_MAP.get(cid)
     if c is None:
@@ -326,9 +368,10 @@ def grade(db, learner, body):
     result['hinted_points'] = sorted(int(i) for i in active.get('hints', {}))
     result['tutor_token'] = token
     result['dialogue_assisted'] = bool(active.get('tutor_assisted'))
-    result['assisted'] = bool(result['hinted_points']) or result['dialogue_assisted']
+    result['text_assisted'] = bool(active.get('text_assisted'))
+    result['assisted'] = bool(result['hinted_points']) or result['dialogue_assisted'] or result['text_assisted']
     if result['assisted']:
-        result['why'] += ' 本次使用过提示或教学对话，分数属于辅助练习；请再独立作答验证掌握。'
+        result['why'] += ' 本次使用过提示、教学对话或自由文本判分，分数属于辅助练习；请再独立作答验证掌握。'
     db.execute("INSERT INTO attempts(learner,token,concept,question,kind,score,payload,created) VALUES(?,?,?,?,?,?,?,?)", (learner, token, c["id"], q["id"], q["kind"], score, json.dumps(result, ensure_ascii=False), time.time()))
     state.update(active=None, last_result=result)
     state_save(db, learner, state)
@@ -701,12 +744,13 @@ def export_learning(db, learner):
             "confidence_source": result.get("confidence_source", "legacy_default"),
             "assisted": result.get("assisted", False), "hinted_points": result.get("hinted_points", []),
             "dialogue_assisted": result.get("dialogue_assisted", False),
+            "text_assisted": result.get("text_assisted", False),
             "rubric": [{key: point[key] for key in
                         ("label", "selected", "correct", "expected", "reason", "category")}
                        for point in result["rubric"]],
         })
     return {"version": 2, "scope": "learning_summary", "exported_at": time.time(),
-            "excluded": ["身份标识与任务令牌", "教材索引与原文", "自由提问、教学对话与补充推理", "浏览器速记记录"],
+            "excluded": ["身份标识与任务令牌", "教材索引与原文", "自由提问、教学对话、补充推理与自由文本作答", "浏览器速记记录"],
             "notice": "仅供归档的学习摘要，不能用于恢复学习身份或导入学习历史。结构化作答仍属于个人学习记录，请自行保管。",
             "report": summary}
 
@@ -719,8 +763,8 @@ def reset_learning(db, learner, body):
     confirmation = "CLEAR_MY_DATA" if scope == "all" else "CLEAR_MY_LEARNING"
     if body.get("confirmation") != confirmation:
         raise InputError("清空需明确确认对应的数据范围")
-    deleted = {"attempts": 0, "events": 0, "learners": 0, "sources": 0, "tutor_conversations": 0}
-    for table in ("attempts", "events", "tutor_conversations") + (("sources",) if scope == "all" else ()):
+    deleted = {"attempts": 0, "events": 0, "learners": 0, "sources": 0, "tutor_conversations": 0, "text_attempts": 0}
+    for table in ("attempts", "events", "tutor_conversations", "text_attempts") + (("sources",) if scope == "all" else ()):
         deleted[table] = db.execute(f"DELETE FROM {table} WHERE learner=?", (learner,)).rowcount
     deleted["learners"] = db.execute("DELETE FROM learners WHERE id=?", (learner,)).rowcount
     remaining = db.execute("SELECT COUNT(*) FROM sources WHERE learner=?", (learner,)).fetchone()[0]
@@ -1119,6 +1163,8 @@ class Handler(BaseHTTPRequestHandler):
             path = urllib.parse.urlparse(self.path).path
             if path == '/api/tutor':
                 return self.send(tutor_turn(learner, body))
+            if path == '/api/answer-text':
+                return self.send(answer_text(learner, body))
             if path == "/api/course-materials/review":
                 if self.client_address[0] not in ("127.0.0.1", "::1"):
                     return self.send({"error": "课程资料校对仅限本机操作"}, 403)

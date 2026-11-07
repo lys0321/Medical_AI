@@ -80,3 +80,22 @@ def generator():
             raise ValueError('模型未返回教学内容')
         return json.loads(content)
     return generate
+
+
+def grader():
+    provider = status()
+    if not provider['available']:
+        return None
+    base, _ = _config()
+
+    def judge(system, payload, schema):
+        result = _json_request(base + '/api/chat', {
+            'model': provider['model'], 'stream': False, 'think': False, 'format': schema,
+            'messages': [{'role': 'system', 'content': system},
+                         {'role': 'user', 'content': json.dumps(payload, ensure_ascii=False)}],
+            'options': {'temperature': 0.1, 'num_predict': 700, 'num_ctx': 8192}}, timeout=60)
+        content = result.get('message', {}).get('content')
+        if not isinstance(content, str):
+            raise ValueError('模型未返回判分内容')
+        return json.loads(content)
+    return judge
