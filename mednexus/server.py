@@ -140,7 +140,8 @@ def progress(db, learner):
                       "pre": round(rows[0]["score"] * 100) if rows else None,
                       "post": round(rows[-1]["score"] * 100) if len(rows) > 1 else None,
                       "last_score": rows[-1]["score"] if rows else None,
-                      "last_assisted": not independent(rows[-1]) if rows else False})
+                      "last_assisted": not independent(rows[-1]) if rows else False,
+                      "syllabus_refs": c.get("syllabus_refs", [])})
     return items
 
 

@@ -1,0 +1,1127 @@
+{
+  "course": {
+    "id": "anatomy",
+    "name": "系统解剖学",
+    "subtitle": "从结构出发，把功能与表现连起来",
+    "chapter": "脑神经",
+    "goal_source": "示例教学目标，待医学教师审核；未接入校内或国家正式大纲"
+  },
+  "chapters": [
+    {
+      "id": "ocular",
+      "name": "眼球运动与瞳孔"
+    },
+    {
+      "id": "facial",
+      "name": "面部感觉与运动"
+    },
+    {
+      "id": "bulbar",
+      "name": "延髓与颈舌运动"
+    }
+  ],
+  "sources": {
+    "eye": {
+      "title": "Clinical Methods · Cranial Nerves III, IV, and VI",
+      "url": "https://www.ncbi.nlm.nih.gov/books/NBK406/",
+      "section": "Chapter 60"
+    },
+    "exam": {
+      "title": "StatPearls · Cranial Nerve Testing",
+      "url": "https://www.ncbi.nlm.nih.gov/books/NBK585066/",
+      "section": "Cranial nerve examination"
+    },
+    "face": {
+      "title": "StatPearls · Facial Nerve Anatomy and Clinical Applications",
+      "url": "https://www.ncbi.nlm.nih.gov/books/NBK554569/",
+      "section": "Clinical significance"
+    },
+    "gag": {
+      "title": "StatPearls · Physiology, Gag Reflex",
+      "url": "https://www.ncbi.nlm.nih.gov/books/NBK554502/",
+      "section": "Mechanism"
+    },
+    "tongue": {
+      "title": "StatPearls · Neuroanatomy, Cranial Nerve 12",
+      "url": "https://www.ncbi.nlm.nih.gov/books/NBK532869/",
+      "section": "Hypoglossal nerve lesions"
+    },
+    "accessory": {
+      "title": "Merck Manual · How To Assess the Cranial Nerves",
+      "url": "https://www.merckmanuals.com/professional/neurologic-disorders/neurologic-examination/how-to-assess-the-cranial-nerves",
+      "section": "Cranial nerve XI"
+    }
+  },
+  "concepts": [
+    {
+      "id": "oculomotor",
+      "name": "动眼神经的功能与损伤",
+      "chapter": "ocular",
+      "level": "掌握",
+      "note": "动眼神经参与提上睑、眼球内收等运动，并携带缩瞳的副交感纤维。完全损伤可见上睑下垂、眼位向外下偏斜；瞳孔是否受累取决于损伤范围，不能把散大视为所有病例必有。",
+      "source": "eye",
+      "terms": [
+        "动眼神经",
+        "上睑下垂",
+        "眼睑",
+        "oculomotor",
+        "瞳孔",
+        "外下斜"
+      ],
+      "research": "不同病因的动眼神经麻痹，瞳孔受累的模式与机制是否存在差异？",
+      "syllabus_refs": []
+    },
+    {
+      "id": "light",
+      "name": "瞳孔对光反射通路",
+      "chapter": "ocular",
+      "level": "掌握",
+      "note": "对光反射的传入侧涉及视神经，传出缩瞳侧涉及动眼神经副交感通路。分析直接与间接反射时，需分别考虑光从哪侧进入、哪侧瞳孔执行缩瞳。",
+      "source": "exam",
+      "terms": [
+        "对光反射",
+        "视神经",
+        "传入",
+        "传出",
+        "瞳孔反射",
+        "light reflex"
+      ],
+      "research": "瞳孔反应的定量测量能否补充传统的床旁观察？",
+      "syllabus_refs": []
+    },
+    {
+      "id": "abducens",
+      "name": "展神经与外直肌",
+      "chapter": "ocular",
+      "level": "掌握",
+      "note": "展神经支配外直肌，主要参与眼球外展。单侧外展功能受限可用来练习神经与肌肉的对应关系；单一体征不能直接确定病因。",
+      "source": "eye",
+      "terms": [
+        "展神经",
+        "外直肌",
+        "外展",
+        "abducens"
+      ],
+      "research": "展神经麻痹的恢复过程与病因、随访时间有什么关系？",
+      "syllabus_refs": []
+    },
+    {
+      "id": "trochlear",
+      "name": "滑车神经与上斜肌",
+      "chapter": "ocular",
+      "level": "熟悉",
+      "note": "滑车神经支配上斜肌。理解上斜肌时，可抓住眼球在内收位时的下转作用；避免把它与展神经所支配的外直肌混淆。",
+      "source": "eye",
+      "terms": [
+        "滑车神经",
+        "上斜肌",
+        "内收位",
+        "trochlear"
+      ],
+      "research": "滑车神经麻痹的功能代偿如何影响眼位检查的解释？",
+      "syllabus_refs": []
+    },
+    {
+      "id": "trigeminal",
+      "name": "三叉神经的感觉与运动",
+      "chapter": "facial",
+      "level": "掌握",
+      "note": "三叉神经包含面部一般感觉与咀嚼运动功能。其眼支、上颌支、下颌支构成感觉分区；咀嚼肌的运动支配主要经下颌支。",
+      "source": "exam",
+      "terms": [
+        "三叉神经",
+        "咀嚼",
+        "面部感觉",
+        "下颌支",
+        "trigeminal"
+      ],
+      "research": "三叉神经相关疼痛中，神经压迫与症状的关系应怎样验证？",
+      "syllabus_refs": []
+    },
+    {
+      "id": "corneal",
+      "name": "角膜反射的传入与传出",
+      "chapter": "facial",
+      "level": "掌握",
+      "note": "角膜反射的经典通路以三叉神经眼支作为传入、面神经作为闭眼传出。感觉到刺激和完成闭眼是两个环节，应分别分析。",
+      "source": "exam",
+      "terms": [
+        "角膜反射",
+        "眼支",
+        "闭眼",
+        "角膜",
+        "corneal reflex"
+      ],
+      "research": "角膜感觉与眨眼反射的定量检测能否提供互补信息？",
+      "syllabus_refs": []
+    },
+    {
+      "id": "facial",
+      "name": "面神经与面瘫的定位",
+      "chapter": "facial",
+      "level": "熟悉",
+      "note": "面神经支配表情肌。典型单侧核上损伤主要影响对侧下面部、额部相对保留；周围性运动损伤可累及同侧上下半面。此处为简化教学模式，真实定位需完整检查。",
+      "source": "face",
+      "terms": [
+        "面神经",
+        "面瘫",
+        "额纹",
+        "表情肌",
+        "facial nerve",
+        "周围性"
+      ],
+      "research": "面神经损伤后的功能恢复，用哪些结局指标评估更合适？",
+      "syllabus_refs": []
+    },
+    {
+      "id": "gag",
+      "name": "舌咽、迷走与咽反射",
+      "chapter": "bulbar",
+      "level": "熟悉",
+      "note": "经典咽反射教学模型中，舌咽神经主要承担传入，迷走神经主要承担传出。反射缺如也可见于健康人，不能孤立地把它等同于特定疾病。",
+      "source": "gag",
+      "terms": [
+        "舌咽神经",
+        "迷走神经",
+        "咽反射",
+        "gag reflex",
+        "吞咽"
+      ],
+      "research": "咽反射表现与吞咽功能之间的关系，能否用研究证据检验？",
+      "syllabus_refs": []
+    },
+    {
+      "id": "accessory",
+      "name": "副神经与颈肩运动",
+      "chapter": "bulbar",
+      "level": "了解",
+      "note": "副神经参与胸锁乳突肌和斜方肌的运动支配。抗阻转头、抗阻耸肩分别提供这两类肌肉功能的教学观察点。",
+      "source": "accessory",
+      "terms": [
+        "副神经",
+        "斜方肌",
+        "胸锁乳突肌",
+        "耸肩",
+        "accessory nerve"
+      ],
+      "research": "副神经损伤后，不同功能评价工具是否测量了相同的恢复维度？",
+      "syllabus_refs": []
+    },
+    {
+      "id": "hypoglossal",
+      "name": "舌下神经与伸舌偏斜",
+      "chapter": "bulbar",
+      "level": "熟悉",
+      "note": "舌下神经参与舌肌运动。单侧周围性损伤时，伸舌可偏向受损侧，并可能出现萎缩或肌束颤动；分析偏斜方向时需先区分核上与周围性损伤。",
+      "source": "tongue",
+      "terms": [
+        "舌下神经",
+        "伸舌",
+        "舌偏",
+        "舌肌",
+        "hypoglossal"
+      ],
+      "research": "不同定位的舌下神经损伤，影像与功能表现如何相互印证？",
+      "syllabus_refs": []
+    }
+  ],
+  "questions": [
+    {
+      "id": "oculomotor-pre",
+      "concept": "oculomotor",
+      "kind": "diagnostic",
+      "prompt": "动眼神经完全损伤后，可能出现哪些表现？请把表现与结构联系起来。",
+      "points": [
+        {
+          "label": "上睑的变化",
+          "correct": "上睑下垂，与提上睑肌失去支配有关",
+          "options": [
+            "上睑下垂，与提上睑肌失去支配有关",
+            "闭眼无力，由动眼神经支配眼轮匝肌",
+            "上睑抬高，与提上睑肌失去支配有关",
+            "暂时不确定"
+          ],
+          "reason": "提上睑肌支配受损可解释上睑下垂。",
+          "category": "机制理解"
+        },
+        {
+          "label": "静息眼位",
+          "correct": "眼位向外下偏斜，与未受损肌作用相对占优有关",
+          "options": [
+            "眼位向外下偏斜，与未受损肌作用相对占优有关",
+            "眼位固定内收，与外直肌作用相对占优有关",
+            "眼球外展受限，因为外直肌由动眼神经支配",
+            "暂时不确定"
+          ],
+          "reason": "外直肌、上斜肌的支配与动眼神经不同。",
+          "category": "机制理解"
+        },
+        {
+          "label": "瞳孔的变化",
+          "correct": "副交感纤维受累时可散大，并非所有损伤都有",
+          "options": [
+            "副交感纤维受累时可散大，并非所有损伤都有",
+            "所有动眼神经损伤必然散瞳",
+            "副交感纤维受累时必然缩瞳",
+            "暂时不确定"
+          ],
+          "reason": "将瞳孔是否受累与损伤范围分开判断。",
+          "category": "机制理解"
+        }
+      ]
+    },
+    {
+      "id": "oculomotor-transfer",
+      "concept": "oculomotor",
+      "kind": "transfer",
+      "prompt": "教学病例：上睑下垂、眼位外下偏斜，但瞳孔反应保留。如何解释这组体征？",
+      "points": [
+        {
+          "label": "主要涉及的脑神经",
+          "correct": "动眼神经",
+          "options": [
+            "动眼神经",
+            "展神经",
+            "面神经",
+            "暂时不确定"
+          ],
+          "reason": "提上睑与多条眼外肌功能指向动眼神经。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "保留瞳孔反应意味着什么",
+          "correct": "瞳孔相关副交感功能可能相对保留",
+          "options": [
+            "瞳孔相关副交感功能可能相对保留",
+            "已经排除动眼神经受损",
+            "所有运动纤维都正常",
+            "暂时不确定"
+          ],
+          "reason": "同一神经内不同功能纤维受累可不一致。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "从这个教学病例能得出什么",
+          "correct": "可解释功能分离，不能仅凭这组表现确定病因",
+          "options": [
+            "可解释功能分离，不能仅凭这组表现确定病因",
+            "可以直接确定病因为糖尿病",
+            "可以排除所有压迫性病因",
+            "暂时不确定"
+          ],
+          "reason": "基础定位与具体病因诊断不能等同。",
+          "category": "应用迁移"
+        }
+      ]
+    },
+    {
+      "id": "light-pre",
+      "concept": "light",
+      "kind": "diagnostic",
+      "prompt": "建立对光反射的最简功能通路。",
+      "points": [
+        {
+          "label": "传入通路",
+          "correct": "视神经",
+          "options": [
+            "视神经",
+            "面神经",
+            "展神经",
+            "暂时不确定"
+          ],
+          "reason": "入光信息经视神经进入中枢。",
+          "category": "概念记忆"
+        },
+        {
+          "label": "缩瞳传出通路",
+          "correct": "动眼神经副交感通路",
+          "options": [
+            "动眼神经副交感通路",
+            "三叉神经眼支",
+            "展神经",
+            "暂时不确定"
+          ],
+          "reason": "缩瞳执行侧涉及动眼神经副交感纤维。",
+          "category": "机制理解"
+        },
+        {
+          "label": "分析反射时",
+          "correct": "同时比较直接与间接反射",
+          "options": [
+            "同时比较直接与间接反射",
+            "只观察被照侧即可判定全部通路",
+            "瞳孔大小等同于反射是否正常",
+            "暂时不确定"
+          ],
+          "reason": "比较两侧反应有助于区分传入与传出。",
+          "category": "机制理解"
+        }
+      ]
+    },
+    {
+      "id": "light-transfer",
+      "concept": "light",
+      "kind": "transfer",
+      "prompt": "假设右侧缩瞳传出通路完全中断、两侧传入正常。照左眼时如何理解？",
+      "points": [
+        {
+          "label": "左眼直接反射",
+          "correct": "可以保留",
+          "options": [
+            "可以保留",
+            "必然消失",
+            "无法接收入光信息",
+            "暂时不确定"
+          ],
+          "reason": "左侧传入和传出均保留。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "右眼间接反射",
+          "correct": "受损",
+          "options": [
+            "受损",
+            "必然正常",
+            "变成角膜反射",
+            "暂时不确定"
+          ],
+          "reason": "右侧执行缩瞳的通路中断。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "功能定位",
+          "correct": "右侧动眼神经副交感传出",
+          "options": [
+            "右侧动眼神经副交感传出",
+            "左侧视神经传入",
+            "右侧面神经传出",
+            "暂时不确定"
+          ],
+          "reason": "不要把执行失败误判为入光失败。",
+          "category": "应用迁移"
+        }
+      ]
+    },
+    {
+      "id": "abducens-pre",
+      "concept": "abducens",
+      "kind": "diagnostic",
+      "prompt": "将展神经、靶肌和动作对应起来。",
+      "points": [
+        {
+          "label": "脑神经序号",
+          "correct": "第 VI 对",
+          "options": [
+            "第 VI 对",
+            "第 III 对",
+            "第 IV 对",
+            "暂时不确定"
+          ],
+          "reason": "展神经为第 VI 对脑神经。",
+          "category": "概念记忆"
+        },
+        {
+          "label": "主要靶肌",
+          "correct": "外直肌",
+          "options": [
+            "外直肌",
+            "内直肌",
+            "上斜肌",
+            "暂时不确定"
+          ],
+          "reason": "展神经支配外直肌。",
+          "category": "概念记忆"
+        },
+        {
+          "label": "主要动作",
+          "correct": "眼球外展",
+          "options": [
+            "眼球外展",
+            "提上睑",
+            "瞳孔缩小",
+            "暂时不确定"
+          ],
+          "reason": "外直肌作用对应外展。",
+          "category": "机制理解"
+        }
+      ]
+    },
+    {
+      "id": "abducens-transfer",
+      "concept": "abducens",
+      "kind": "transfer",
+      "prompt": "教学病例中，右眼向右运动明显受限。只讨论最简功能定位。",
+      "points": [
+        {
+          "label": "受限动作",
+          "correct": "右眼外展",
+          "options": [
+            "右眼外展",
+            "右眼内收",
+            "左眼外展",
+            "暂时不确定"
+          ],
+          "reason": "先将方向转换成单眼动作。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "对应靶肌",
+          "correct": "右外直肌",
+          "options": [
+            "右外直肌",
+            "右内直肌",
+            "右提上睑肌",
+            "暂时不确定"
+          ],
+          "reason": "外展对应外直肌。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "主要支配神经",
+          "correct": "右展神经",
+          "options": [
+            "右展神经",
+            "右面神经",
+            "左滑车神经",
+            "暂时不确定"
+          ],
+          "reason": "功能链是右展神经—右外直肌—右眼外展。",
+          "category": "应用迁移"
+        }
+      ]
+    },
+    {
+      "id": "trochlear-pre",
+      "concept": "trochlear",
+      "kind": "diagnostic",
+      "prompt": "梳理滑车神经的基本对应关系。",
+      "points": [
+        {
+          "label": "序号",
+          "correct": "第 IV 对",
+          "options": [
+            "第 IV 对",
+            "第 VI 对",
+            "第 VII 对",
+            "暂时不确定"
+          ],
+          "reason": "滑车神经为第 IV 对。",
+          "category": "概念记忆"
+        },
+        {
+          "label": "靶肌",
+          "correct": "上斜肌",
+          "options": [
+            "上斜肌",
+            "外直肌",
+            "提上睑肌",
+            "暂时不确定"
+          ],
+          "reason": "上斜肌由滑车神经支配。",
+          "category": "概念记忆"
+        },
+        {
+          "label": "学习动作",
+          "correct": "内收位下转",
+          "options": [
+            "内收位下转",
+            "外展",
+            "闭眼",
+            "暂时不确定"
+          ],
+          "reason": "内收位下转是理解上斜肌的切入点。",
+          "category": "机制理解"
+        }
+      ]
+    },
+    {
+      "id": "trochlear-transfer",
+      "concept": "trochlear",
+      "kind": "transfer",
+      "prompt": "教学检查中，希望突出上斜肌的下转功能，应如何建立推理？",
+      "points": [
+        {
+          "label": "观察位置",
+          "correct": "眼球内收位",
+          "options": [
+            "眼球内收位",
+            "只看闭眼动作",
+            "只看瞳孔大小",
+            "暂时不确定"
+          ],
+          "reason": "内收位有助于突出上斜肌的下转作用。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "目标肌肉",
+          "correct": "上斜肌",
+          "options": [
+            "上斜肌",
+            "外直肌",
+            "眼轮匝肌",
+            "暂时不确定"
+          ],
+          "reason": "先由动作联系肌肉。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "目标神经",
+          "correct": "滑车神经",
+          "options": [
+            "滑车神经",
+            "面神经",
+            "展神经",
+            "暂时不确定"
+          ],
+          "reason": "再由肌肉联系滑车神经。",
+          "category": "应用迁移"
+        }
+      ]
+    },
+    {
+      "id": "trigeminal-pre",
+      "concept": "trigeminal",
+      "kind": "diagnostic",
+      "prompt": "三叉神经的两类主要功能是什么？",
+      "points": [
+        {
+          "label": "感觉功能",
+          "correct": "面部一般感觉",
+          "options": [
+            "面部一般感觉",
+            "视觉",
+            "听觉",
+            "暂时不确定"
+          ],
+          "reason": "三叉神经承担面部一般感觉。",
+          "category": "概念记忆"
+        },
+        {
+          "label": "运动功能",
+          "correct": "咀嚼肌运动",
+          "options": [
+            "咀嚼肌运动",
+            "全部表情肌运动",
+            "眼球外展",
+            "暂时不确定"
+          ],
+          "reason": "咀嚼运动与面部表情运动不同。",
+          "category": "机制理解"
+        },
+        {
+          "label": "运动纤维主要经过",
+          "correct": "下颌支",
+          "options": [
+            "下颌支",
+            "眼支",
+            "上颌支",
+            "暂时不确定"
+          ],
+          "reason": "三叉神经运动功能主要随下颌支。",
+          "category": "机制理解"
+        }
+      ]
+    },
+    {
+      "id": "trigeminal-transfer",
+      "concept": "trigeminal",
+      "kind": "transfer",
+      "prompt": "学习病例同时提到面部感觉减退和咀嚼无力。建立最简功能对应。",
+      "points": [
+        {
+          "label": "优先讨论的神经",
+          "correct": "三叉神经",
+          "options": [
+            "三叉神经",
+            "面神经",
+            "舌下神经",
+            "暂时不确定"
+          ],
+          "reason": "感觉与咀嚼同时指向三叉神经功能。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "咀嚼运动分支",
+          "correct": "下颌支",
+          "options": [
+            "下颌支",
+            "眼支",
+            "上颌支",
+            "暂时不确定"
+          ],
+          "reason": "下颌支包含咀嚼运动纤维。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "与面神经的区分",
+          "correct": "面神经主要支配表情肌运动",
+          "options": [
+            "面神经主要支配表情肌运动",
+            "面神经主要支配咀嚼肌",
+            "二者完全相同",
+            "暂时不确定"
+          ],
+          "reason": "不要用面部这一共同区域替代具体功能。",
+          "category": "应用迁移"
+        }
+      ]
+    },
+    {
+      "id": "corneal-pre",
+      "concept": "corneal",
+      "kind": "diagnostic",
+      "prompt": "分别识别角膜反射的输入与输出。",
+      "points": [
+        {
+          "label": "传入",
+          "correct": "三叉神经眼支",
+          "options": [
+            "三叉神经眼支",
+            "面神经",
+            "动眼神经",
+            "暂时不确定"
+          ],
+          "reason": "感觉传入经三叉神经眼支。",
+          "category": "机制理解"
+        },
+        {
+          "label": "闭眼传出",
+          "correct": "面神经",
+          "options": [
+            "面神经",
+            "展神经",
+            "视神经",
+            "暂时不确定"
+          ],
+          "reason": "闭眼动作由面神经相关运动通路完成。",
+          "category": "机制理解"
+        },
+        {
+          "label": "执行肌",
+          "correct": "眼轮匝肌",
+          "options": [
+            "眼轮匝肌",
+            "外直肌",
+            "提上睑肌",
+            "暂时不确定"
+          ],
+          "reason": "闭眼与提上睑是不同动作。",
+          "category": "概念记忆"
+        }
+      ]
+    },
+    {
+      "id": "corneal-transfer",
+      "concept": "corneal",
+      "kind": "transfer",
+      "prompt": "教学假设：右侧面神经运动通路受损，角膜感觉传入正常。",
+      "points": [
+        {
+          "label": "右侧角膜刺激感觉",
+          "correct": "可以保留",
+          "options": [
+            "可以保留",
+            "必然消失",
+            "属于视觉",
+            "暂时不确定"
+          ],
+          "reason": "传入正常时可保留感觉。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "右侧闭眼动作",
+          "correct": "可以受损",
+          "options": [
+            "可以受损",
+            "必然正常",
+            "由展神经接替",
+            "暂时不确定"
+          ],
+          "reason": "右侧闭眼执行可受损。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "解释框架",
+          "correct": "把感觉传入和闭眼传出分开",
+          "options": [
+            "把感觉传入和闭眼传出分开",
+            "有感觉就证明全部反射正常",
+            "闭眼无力必然是角膜无感觉",
+            "暂时不确定"
+          ],
+          "reason": "保留感觉不等于保留运动执行。",
+          "category": "应用迁移"
+        }
+      ]
+    },
+    {
+      "id": "facial-pre",
+      "concept": "facial",
+      "kind": "diagnostic",
+      "prompt": "区分面神经运动与两种典型面瘫模式。",
+      "points": [
+        {
+          "label": "主要运动功能",
+          "correct": "表情肌运动",
+          "options": [
+            "表情肌运动",
+            "咀嚼肌运动",
+            "瞳孔缩小",
+            "暂时不确定"
+          ],
+          "reason": "面神经与表情肌对应。",
+          "category": "概念记忆"
+        },
+        {
+          "label": "典型核上模式",
+          "correct": "对侧下面部无力，额部相对保留",
+          "options": [
+            "对侧下面部无力，额部相对保留",
+            "同侧上下半面一律瘫痪",
+            "只影响舌运动",
+            "暂时不确定"
+          ],
+          "reason": "额部的双侧核上支配是理解切入点。",
+          "category": "机制理解"
+        },
+        {
+          "label": "典型周围性模式",
+          "correct": "可累及同侧上下半面",
+          "options": [
+            "可累及同侧上下半面",
+            "仅对侧下面部",
+            "必然不影响闭眼",
+            "暂时不确定"
+          ],
+          "reason": "周围运动通路受损可影响同侧闭眼和口角。",
+          "category": "机制理解"
+        }
+      ]
+    },
+    {
+      "id": "facial-transfer",
+      "concept": "facial",
+      "kind": "transfer",
+      "prompt": "教学病例：右侧额纹减少、闭眼无力和右口角无力。仅在典型模式中比较。",
+      "points": [
+        {
+          "label": "倾向的模式",
+          "correct": "右侧周围性面神经运动损伤",
+          "options": [
+            "右侧周围性面神经运动损伤",
+            "右侧展神经损伤",
+            "左侧舌下神经损伤",
+            "暂时不确定"
+          ],
+          "reason": "同侧上下半面均受累符合该教学模式。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "闭眼无力相关肌",
+          "correct": "眼轮匝肌",
+          "options": [
+            "眼轮匝肌",
+            "提上睑肌",
+            "外直肌",
+            "暂时不确定"
+          ],
+          "reason": "闭眼对应眼轮匝肌。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "教学结论边界",
+          "correct": "不能据此直接确定具体病因",
+          "options": [
+            "不能据此直接确定具体病因",
+            "可以直接诊断所有病例为贝尔麻痹",
+            "可以排除其他神经系统病变",
+            "暂时不确定"
+          ],
+          "reason": "模式匹配不能代替病因诊断。",
+          "category": "应用迁移"
+        }
+      ]
+    },
+    {
+      "id": "gag-pre",
+      "concept": "gag",
+      "kind": "diagnostic",
+      "prompt": "建立经典咽反射教学通路，并说明解释边界。",
+      "points": [
+        {
+          "label": "主要传入",
+          "correct": "舌咽神经",
+          "options": [
+            "舌咽神经",
+            "展神经",
+            "舌下神经",
+            "暂时不确定"
+          ],
+          "reason": "经典教学模型将舌咽神经作为主要传入。",
+          "category": "机制理解"
+        },
+        {
+          "label": "主要传出",
+          "correct": "迷走神经",
+          "options": [
+            "迷走神经",
+            "视神经",
+            "副神经",
+            "暂时不确定"
+          ],
+          "reason": "经典教学模型将迷走神经作为主要传出。",
+          "category": "机制理解"
+        },
+        {
+          "label": "缺如的解释",
+          "correct": "不能单独据此确定疾病",
+          "options": [
+            "不能单独据此确定疾病",
+            "必然存在严重疾病",
+            "等同于完全不能吞咽",
+            "暂时不确定"
+          ],
+          "reason": "需结合其他体征和功能评估。",
+          "category": "机制理解"
+        }
+      ]
+    },
+    {
+      "id": "gag-transfer",
+      "concept": "gag",
+      "kind": "transfer",
+      "prompt": "一个教学案例仅给出“咽反射未引出”。你应如何推理？",
+      "points": [
+        {
+          "label": "对疾病的推断",
+          "correct": "信息不足以单独确定疾病",
+          "options": [
+            "信息不足以单独确定疾病",
+            "可直接确定脑干病变",
+            "可直接确定吸入性肺炎",
+            "暂时不确定"
+          ],
+          "reason": "单一反射结果不能替代完整判断。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "需要联系的传入",
+          "correct": "舌咽神经",
+          "options": [
+            "舌咽神经",
+            "动眼神经",
+            "嗅神经",
+            "暂时不确定"
+          ],
+          "reason": "回到经典反射弧。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "需要联系的传出",
+          "correct": "迷走神经",
+          "options": [
+            "迷走神经",
+            "展神经",
+            "视神经",
+            "暂时不确定"
+          ],
+          "reason": "再分析执行侧。",
+          "category": "应用迁移"
+        }
+      ]
+    },
+    {
+      "id": "accessory-pre",
+      "concept": "accessory",
+      "kind": "diagnostic",
+      "prompt": "把副神经与颈肩动作对应起来。",
+      "points": [
+        {
+          "label": "序号",
+          "correct": "第 XI 对",
+          "options": [
+            "第 XI 对",
+            "第 XII 对",
+            "第 IX 对",
+            "暂时不确定"
+          ],
+          "reason": "副神经为第 XI 对。",
+          "category": "概念记忆"
+        },
+        {
+          "label": "耸肩的主要观察肌",
+          "correct": "斜方肌",
+          "options": [
+            "斜方肌",
+            "外直肌",
+            "眼轮匝肌",
+            "暂时不确定"
+          ],
+          "reason": "抗阻耸肩观察斜方肌。",
+          "category": "机制理解"
+        },
+        {
+          "label": "抗阻转头的观察肌",
+          "correct": "胸锁乳突肌",
+          "options": [
+            "胸锁乳突肌",
+            "咬肌",
+            "舌肌",
+            "暂时不确定"
+          ],
+          "reason": "抗阻转头可观察胸锁乳突肌。",
+          "category": "机制理解"
+        }
+      ]
+    },
+    {
+      "id": "accessory-transfer",
+      "concept": "accessory",
+      "kind": "transfer",
+      "prompt": "学习检查设计：同时观察抗阻耸肩与抗阻转头。",
+      "points": [
+        {
+          "label": "共同涉及的脑神经",
+          "correct": "副神经",
+          "options": [
+            "副神经",
+            "面神经",
+            "视神经",
+            "暂时不确定"
+          ],
+          "reason": "两种动作联系副神经相关肌肉。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "耸肩对应",
+          "correct": "斜方肌",
+          "options": [
+            "斜方肌",
+            "上斜肌",
+            "咬肌",
+            "暂时不确定"
+          ],
+          "reason": "区分斜方肌与上斜肌。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "转头对应",
+          "correct": "胸锁乳突肌",
+          "options": [
+            "胸锁乳突肌",
+            "外直肌",
+            "颏舌肌",
+            "暂时不确定"
+          ],
+          "reason": "通过具体动作识别靶肌。",
+          "category": "应用迁移"
+        }
+      ]
+    },
+    {
+      "id": "hypoglossal-pre",
+      "concept": "hypoglossal",
+      "kind": "diagnostic",
+      "prompt": "只讨论单侧周围性舌下神经损伤。",
+      "points": [
+        {
+          "label": "主要功能",
+          "correct": "舌肌运动",
+          "options": [
+            "舌肌运动",
+            "表情肌运动",
+            "面部感觉",
+            "暂时不确定"
+          ],
+          "reason": "舌下神经对应舌肌运动。",
+          "category": "概念记忆"
+        },
+        {
+          "label": "伸舌方向",
+          "correct": "可偏向受损侧",
+          "options": [
+            "可偏向受损侧",
+            "必然偏向健侧",
+            "必然完全不偏",
+            "暂时不确定"
+          ],
+          "reason": "此结论限定于单侧周围性损伤。",
+          "category": "机制理解"
+        },
+        {
+          "label": "伴随体征",
+          "correct": "可有舌肌萎缩或肌束颤动",
+          "options": [
+            "可有舌肌萎缩或肌束颤动",
+            "必然只有瞳孔散大",
+            "必然只有听力下降",
+            "暂时不确定"
+          ],
+          "reason": "萎缩和肌束颤动可提示下运动神经元相关受累。",
+          "category": "机制理解"
+        }
+      ]
+    },
+    {
+      "id": "hypoglossal-transfer",
+      "concept": "hypoglossal",
+      "kind": "transfer",
+      "prompt": "教学假设：右侧周围性舌下神经损伤。尝试预期体征并说明边界。",
+      "points": [
+        {
+          "label": "伸舌可偏向",
+          "correct": "右侧",
+          "options": [
+            "右侧",
+            "左侧",
+            "必然无偏斜",
+            "暂时不确定"
+          ],
+          "reason": "单侧周围性损伤时向受损侧偏斜。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "右侧舌肌可能",
+          "correct": "萎缩或肌束颤动",
+          "options": [
+            "萎缩或肌束颤动",
+            "只出现角膜感觉消失",
+            "只出现眼球外展受限",
+            "暂时不确定"
+          ],
+          "reason": "联系周围运动通路与靶肌。",
+          "category": "应用迁移"
+        },
+        {
+          "label": "能否直接套用核上损伤",
+          "correct": "不能，需重新分析支配与定位",
+          "options": [
+            "不能，需重新分析支配与定位",
+            "可以，任何伸舌偏斜的规则都相同",
+            "可以，完全不需要考虑定位",
+            "暂时不确定"
+          ],
+          "reason": "必须保留题目的周围性限定。",
+          "category": "应用迁移"
+        }
+      ]
+    }
+  ],
+  "hints": {
+    "level1": "先单独分析“{label}”：列出题干给出的条件与限制，再比较选项。",
+    "diagnostic": "按“结构或通路 → 对应功能 → 可能表现”口述依据。遇到“所有、必然”等表述，检查题干是否支持这样的范围。",
+    "transfer": "先找出与原情境相同和变化的条件，只在题干给出的定位范围内推理，再说明排除其他选项的依据。"
+  },
+  "query": {
+    "oculomotor": "(\"Oculomotor Nerve Diseases\"[MeSH Terms] OR \"third nerve palsy\"[Title/Abstract]) AND (pupil[Title/Abstract] OR mechanism[Title/Abstract])",
+    "light": "pupillary light reflex[Title/Abstract] AND quantitative pupillometry[Title/Abstract]",
+    "abducens": "abducens nerve palsy[Title/Abstract] AND (recovery[Title/Abstract] OR prognosis[Title/Abstract])",
+    "trochlear": "trochlear nerve palsy[Title/Abstract] AND compensation[Title/Abstract]",
+    "trigeminal": "trigeminal neuralgia[Title/Abstract] AND neurovascular compression[Title/Abstract]",
+    "corneal": "corneal reflex[Title/Abstract] AND blink reflex[Title/Abstract]",
+    "facial": "facial nerve palsy[Title/Abstract] AND (recovery[Title/Abstract] OR outcome measures[Title/Abstract])",
+    "gag": "gag reflex[Title/Abstract] AND (swallowing[Title/Abstract] OR dysphagia[Title/Abstract])",
+    "accessory": "accessory nerve injury[Title/Abstract] AND functional outcome[Title/Abstract]",
+    "hypoglossal": "hypoglossal nerve palsy[Title/Abstract] AND (imaging[Title/Abstract] OR localization[Title/Abstract])"
+  }
+}

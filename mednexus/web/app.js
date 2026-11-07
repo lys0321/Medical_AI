@@ -18,6 +18,7 @@ let askOriginConcept = null;
 let answerOriginConcept = null;
 let learningPlanLoading = false;
 let reportRequestId = 0;
+let syllabusRefsRequest = 0;
 
 /* ---------- 基础工具 ---------- */
 function el(tag, cls, text) {
@@ -386,6 +387,7 @@ function renderLearn(data) {
 }
 
 function renderCourse(data) {
+  const renderRequest = ++syllabusRefsRequest;
   if (typeof mountCourseCatalog === "function") mountCourseCatalog($("courseCatalog"), {
     onAsk: (text) => { setAskContext(null); showView("home"); $("q").value = text; $("q").focus(); },
     onStart: async () => { showView("quiz", { restoreTask: false }); await loadTask(data.recommendation?.id || "oculomotor", "auto"); }
@@ -438,6 +440,22 @@ function renderCourse(data) {
     el("h3", null, selected.name),
     el("p", "study-source", "示例目标：" + selected.level + " · " + selected.status +
       "。阅读只记录接触情况，掌握需通过不同题目的测评。"));
+  if (Array.isArray(selected.syllabus_refs) && selected.syllabus_refs.length) {
+    const refsLine = el("p", "study-source", "对应大纲要求：" + selected.syllabus_refs.join("；"));
+    entry.appendChild(refsLine);
+    if (typeof loadCourseMaterials === "function") {
+      Promise.resolve(loadCourseMaterials()).then((materials) => {
+        if (renderRequest !== syllabusRefsRequest) return;
+        const items = materials?.syllabus?.items || [];
+        refsLine.textContent = "对应大纲要求：" + selected.syllabus_refs.map((ref) => {
+          const item = items.find((i) => i.id === ref);
+          if (!item) return ref;
+          const requirement = String(item.text || "");
+          return (item.chapter || "") + "·" + (requirement.length > 30 ? requirement.slice(0, 30) + "…" : requirement);
+        }).join("；");
+      }).catch(() => {});
+    }
+  }
   const modes = el("fieldset", "course-modes");
   modes.appendChild(el("legend", null, "这次想怎样开始？"));
   [["test", "先测一测，检查掌握情况"], ["study", "先复习学习卡，再做题"],
