@@ -410,6 +410,16 @@ function renderCourse(data) {
   const stats = data.stats || {};
   heading.append(names, el("span", "pill", (stats.mastered || 0) + " / " + concepts.length + " 个已掌握"));
   box.appendChild(heading);
+  if (typeof summarizeLevels === "function") {
+    const levelRows = summarizeLevels(concepts);
+    if (levelRows.length) {
+      const summary = el("div", "course-level-summary");
+      levelRows.forEach((row) => summary.appendChild(el("p", "study-source",
+        "「" + row.level + "」级 " + row.total + " 个：已测评 " + row.assessed + "，已掌握 " + row.mastered)));
+      summary.appendChild(el("p", "study-source", "层级为示例教学目标，待教师审核。"));
+      box.appendChild(summary);
+    }
+  }
   const layout = el("div", "course-layout");
   const directory = el("div", "course-directory");
   [...new Set(concepts.map((c) => c.unit))].forEach((unit) => {
@@ -965,6 +975,18 @@ function researchQueryChanged() {
   if (typeof updateResearchQueryPlan === 'function') updateResearchQueryPlan($("researchQueryPlan"), $("pmQuery").value);
   rememberResearchWorkspace();
 }
+const researchScopeButtons = { researchScopeBasic: "basic", researchScopeFrontier: "frontier", researchScopeNone: "none" };
+Object.keys(researchScopeButtons).forEach((id) => {
+  $(id).addEventListener("click", () => {
+    if (typeof applyResearchScope !== "function") return;
+    const mode = researchScopeButtons[id];
+    $("pmQuery").value = applyResearchScope($("pmQuery").value, mode, new Date().getFullYear());
+    researchQueryChanged();
+    $("pmStatus").textContent = mode === "basic" ? "已限定综述类文献；仅调整检索式，不保证结果更基础，请核对后主动检索。" :
+      mode === "frontier" ? "已限定近四个自然年；仅调整检索式，不保证结果更前沿，请核对后主动检索。" :
+      "已去掉检索限定；请核对后主动检索。";
+  });
+});
 $("newResearch").addEventListener("click", () => {
   resetResearchContext(); $("pmQ").focus();
   $("pmStatus").textContent = "已开启独立检索。可输入医学主题或英文 PubMed 检索式。";

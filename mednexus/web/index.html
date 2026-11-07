@@ -267,6 +267,12 @@
         <label for="pmQuery">确认英文检索式（可编辑）</label>
         <textarea id="pmQuery" rows="3" maxlength="1500"></textarea>
         <p class="study-source">此模板来自当前知识点，尚未逐句翻译你的疑问。请核对英文主题与研究条件；只有点击下方按钮才会向 PubMed 发送检索词。</p>
+        <div class="research-scope-row">
+          <button id="researchScopeBasic" class="btn" type="button">更基础：限定综述</button>
+          <button id="researchScopeFrontier" class="btn" type="button">更前沿：限定近四个自然年</button>
+          <button id="researchScopeNone" class="btn" type="button">去掉限定</button>
+        </div>
+        <p class="study-source">只调整检索限定、不会自动检索，也不保证结果难度。</p>
         <button id="runResearchQuery" class="btn btn-primary" type="button">使用此检索式查询文献 →</button>
       </div>
       <div class="chips">

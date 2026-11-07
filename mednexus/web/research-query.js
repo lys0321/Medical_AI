@@ -49,3 +49,36 @@ function updateResearchQueryPlan(container, query) {
     query === proposal.original_query ? '当前使用原知识点模板；请核对后主动查询。' :
     '检索式已手动修改；词语对照仅供参考，查询以文本框中的实际内容为准。';
 }
+
+const researchScopeBasicFilter = ' AND (Review[Publication Type] OR Systematic Review[Publication Type])';
+const researchScopeFrontierFilter = / AND \("\d{4}\/01\/01"\[Date - Publication\] : "\d{4}\/12\/31"\[Date - Publication\]\)$/;
+
+function researchScopeBase(query) {
+  let rest = null;
+  if (query.endsWith(researchScopeBasicFilter)) {
+    rest = query.slice(0, -researchScopeBasicFilter.length);
+  } else {
+    const match = researchScopeFrontierFilter.exec(query);
+    if (match) rest = query.slice(0, match.index);
+  }
+  if (rest === null || rest.length < 2 || rest[0] !== '(' || rest[rest.length - 1] !== ')') return null;
+  let depth = 0;
+  for (let i = 0; i < rest.length; i++) {
+    if (rest[i] === '(') depth += 1;
+    else if (rest[i] === ')') depth -= 1;
+    if (depth <= 0 && i < rest.length - 1) return null;
+  }
+  return depth === 0 ? rest.slice(1, -1) : null;
+}
+
+function applyResearchScope(query, mode, year) {
+  const text = typeof query === 'string' ? query : '';
+  const unwrapped = researchScopeBase(text);
+  const base = unwrapped === null ? text : unwrapped;
+  if (mode === 'basic') return '(' + base + ')' + researchScopeBasicFilter;
+  if (mode === 'frontier') {
+    const y = Number.isInteger(year) ? year : new Date().getFullYear();
+    return '(' + base + ') AND ("' + (y - 3) + '/01/01"[Date - Publication] : "' + y + '/12/31"[Date - Publication])';
+  }
+  return base;
+}
