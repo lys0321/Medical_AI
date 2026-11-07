@@ -70,3 +70,39 @@ test('editing the original question removes its mapping and prevents stale contr
   old.listeners.click();assert.equal(s.nodes.researchQueryPlan.children.length,0);assert.equal(s.nodes.pmQuery.value,p.query);
   assert.equal(s.calls.length,1);assert.equal(s.nodes.researchQueryEditor.hidden,true);
 });
+
+test('applyResearchScope wraps the base in ASCII, replaces modes without stacking and never strips user filters',()=>{
+  const s=setup(),base='oculomotor[MeSH]';
+  const basic=s.ctx.applyResearchScope(base,'basic',2026);
+  assert.equal(basic,'(oculomotor[MeSH]) AND (Review[Publication Type] OR Systematic Review[Publication Type])');
+  assert.match(basic,/^[\x00-\x7F]+$/);
+  assert.equal(s.ctx.applyResearchScope(basic,'basic',2026),basic);
+  const frontier=s.ctx.applyResearchScope(basic,'frontier',2026);
+  assert.equal(frontier,'(oculomotor[MeSH]) AND ("2023/01/01"[Date - Publication] : "2026/12/31"[Date - Publication])');
+  assert.match(frontier,/^[\x00-\x7F]+$/);
+  assert.equal(s.ctx.applyResearchScope(frontier,'basic',2026),basic);
+  assert.equal(s.ctx.applyResearchScope(frontier,'frontier',2027),
+    '(oculomotor[MeSH]) AND ("2024/01/01"[Date - Publication] : "2027/12/31"[Date - Publication])');
+  assert.equal(s.ctx.applyResearchScope(frontier,'none',2026),base);
+  assert.equal(s.ctx.applyResearchScope(basic,'none',2026),base);
+  assert.equal(s.ctx.applyResearchScope('x AND review[pt]','none',2026),'x AND review[pt]');
+  assert.equal(s.ctx.applyResearchScope('x AND review[pt]','basic',2026),
+    '(x AND review[pt]) AND (Review[Publication Type] OR Systematic Review[Publication Type])');
+  assert.equal(s.ctx.applyResearchScope('x) AND (Review[Publication Type] OR Systematic Review[Publication Type])','none',2026),
+    'x) AND (Review[Publication Type] OR Systematic Review[Publication Type])');
+});
+
+test('scope buttons rewrite only the draft query, refresh its status and never call the API',()=>{
+  const s=setup(),year=new Date().getFullYear();
+  s.nodes.pmQuery.value='oculomotor[MeSH]';
+  s.nodes.researchScopeBasic.listeners.click();
+  assert.equal(s.nodes.pmQuery.value,'(oculomotor[MeSH]) AND (Review[Publication Type] OR Systematic Review[Publication Type])');
+  assert.match(s.nodes.pmStatus.textContent,/不保证结果更基础/);
+  s.nodes.researchScopeFrontier.listeners.click();
+  assert.equal(s.nodes.pmQuery.value,'(oculomotor[MeSH]) AND ("'+(year-3)+'/01/01"[Date - Publication] : "'+year+'/12/31"[Date - Publication])');
+  assert.match(s.nodes.pmStatus.textContent,/不保证结果更前沿/);
+  s.nodes.researchScopeNone.listeners.click();
+  assert.equal(s.nodes.pmQuery.value,'oculomotor[MeSH]');
+  assert.match(s.nodes.pmStatus.textContent,/已去掉检索限定/);
+  assert.equal(s.calls.length,0);
+});

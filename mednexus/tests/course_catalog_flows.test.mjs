@@ -172,3 +172,25 @@ test('network failure provides retry and an older request never overwrites a new
   await failed.mount({}); assert.match(text(failed.container), /课程大纲读取失败/);
   assert.ok(button(failed.container, '重新读取课程大纲'));
 });
+
+test('summarizeLevels counts assessed and mastered per level in fixed order and skips empty levels', () => {
+  const app = setup();
+  const rows = app.ctx.summarizeLevels([
+    {level: '掌握', status: '已掌握'},
+    {level: '掌握', status: '需巩固'},
+    {level: '掌握', status: '未测评'},
+    {level: '熟悉', status: '初步达标'},
+    {level: '熟悉', status: '已掌握'},
+    {level: '了解', status: '未测评'},
+    {name: '无层级目标', status: '已掌握'}
+  ]);
+  const plain = value => JSON.parse(JSON.stringify(value));
+  assert.deepEqual(plain(rows), [
+    {level: '掌握', total: 3, assessed: 2, mastered: 1},
+    {level: '熟悉', total: 2, assessed: 2, mastered: 1},
+    {level: '了解', total: 1, assessed: 0, mastered: 0}
+  ]);
+  assert.deepEqual(plain(app.ctx.summarizeLevels([{level: '熟悉', status: '未测评'}]).map(row => row.level)), ['熟悉']);
+  assert.deepEqual(plain(app.ctx.summarizeLevels([])), []);
+  assert.deepEqual(plain(app.ctx.summarizeLevels(null)), []);
+});

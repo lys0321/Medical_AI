@@ -165,3 +165,13 @@ function courseCatalogRenderChapter(detail, state) {
     requirements.appendChild(group);
   });
 }
+
+function summarizeLevels(concepts) {
+  const items = Array.isArray(concepts) ? concepts : [];
+  return ['掌握', '熟悉', '了解'].map((level) => {
+    const rows = items.filter((c) => c && c.level === level);
+    return {level, total: rows.length,
+      assessed: rows.filter((c) => c.status !== '未测评').length,
+      mastered: rows.filter((c) => c.status === '已掌握').length};
+  }).filter((row) => row.total > 0);
+}
