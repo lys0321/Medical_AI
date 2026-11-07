@@ -4,6 +4,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 const source = readFileSync(new URL('../web/course-catalog.js', import.meta.url), 'utf8');
+const appSource = readFileSync(new URL('../web/app.js', import.meta.url), 'utf8');
+const renderCourseSource = appSource.slice(appSource.indexOf('function renderCourse(data)'),
+  appSource.indexOf('/* ---------- 知识库 ---------- */'));
 
 class Node {
   constructor(tag = 'div', className = '', value = '') {
@@ -193,4 +196,53 @@ test('summarizeLevels counts assessed and mastered per level in fixed order and 
   assert.deepEqual(plain(app.ctx.summarizeLevels([{level: '熟悉', status: '未测评'}]).map(row => row.level)), ['熟悉']);
   assert.deepEqual(plain(app.ctx.summarizeLevels([])), []);
   assert.deepEqual(plain(app.ctx.summarizeLevels(null)), []);
+});
+
+function setupCoursePanel(overrides = {}) {
+  const nodes = {courseCatalog: new Node(), coursePanel: new Node()};
+  const ctx = vm.createContext({el: (tag, cls, value) => new Node(tag, cls, value),
+    $: id => nodes[id], selectedCourseConcept: null, selectedCourseMode: 'test', syllabusRefsRequest: 0,
+    ...overrides});
+  vm.runInContext(renderCourseSource, ctx);
+  return {ctx, nodes, render: data => {ctx.data = data; vm.runInContext('renderCourse(data)', ctx);}};
+}
+
+function coursePanelData(refs) {
+  return {course: {id: 'anatomy', name: '系统解剖学', chapter: '脑神经'}, stats: {}, active: null,
+    recommendation: {id: 'light'},
+    concepts: [{id: 'light', name: '瞳孔对光反射通路', unit: '眼球运动与瞳孔', level: '掌握',
+      status: '未测评', syllabus_refs: refs}]};
+}
+
+test('concept panel renders syllabus refs immediately then resolves them to chapter·text', async () => {
+  const items = [{id: 'syllabus-128', chapter: '第十七章 周围神经系统',
+    text: '掌握脑神经的名称、分支和分布。'}];
+  const app = setupCoursePanel({loadCourseMaterials: async () => ({syllabus: {items}})});
+  app.render(coursePanelData(['syllabus-128', 'syllabus-999']));
+  const line = all(app.nodes.coursePanel).find(node => (node.textContent || '').startsWith('对应大纲要求：'));
+  assert.ok(line);
+  assert.match(line.textContent, /syllabus-128/);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.match(line.textContent, /第十七章 周围神经系统·掌握脑神经的名称、分支和分布。/);
+  assert.ok(!line.textContent.includes('syllabus-128'));
+  assert.match(line.textContent, /syllabus-999/);
+});
+
+test('concept without syllabus refs renders no syllabus requirement line', async () => {
+  const app = setupCoursePanel({loadCourseMaterials: async () => ({syllabus: {items: []}})});
+  app.render(coursePanelData(undefined));
+  app.render(coursePanelData([]));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.ok(!all(app.nodes.coursePanel).some(node => (node.textContent || '').includes('对应大纲要求')));
+});
+
+test('a newer render supersedes a pending syllabus ref resolution', async () => {
+  let release;
+  const app = setupCoursePanel({loadCourseMaterials: () => new Promise(resolve => release = resolve)});
+  app.render(coursePanelData(['syllabus-128']));
+  const stale = all(app.nodes.coursePanel).find(node => (node.textContent || '').startsWith('对应大纲要求：'));
+  app.render(coursePanelData(undefined));
+  release({syllabus: {items: [{id: 'syllabus-128', chapter: '章', text: '要求原文'}]}});
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(stale.textContent, '对应大纲要求：syllabus-128');
 });
