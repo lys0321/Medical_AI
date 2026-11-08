@@ -82,6 +82,35 @@ def generator():
     return generate
 
 
+_embed_cache = None
+
+
+def embedder():
+    """Return ``(model, embed(text) -> list)`` when a local embedding model is installed, else None."""
+    global _embed_cache
+    selected = os.environ.get('MEDNEXUS_EMBED_MODEL', 'nomic-embed-text').strip()
+    key = (os.environ.get('MEDNEXUS_TUTOR_URL'), selected)
+    with _lock:
+        if _embed_cache and _embed_cache[0] == key and time.monotonic() - _embed_cache[1] < 10:
+            model = _embed_cache[2]
+        else:
+            model = None
+            try:
+                base, _ = _config()
+                names = [m.get('name') for m in _json_request(base + '/api/tags').get('models', []) if isinstance(m, dict)]
+                model = next((n for n in names if n in (selected, selected + ':latest')), None)
+            except Exception:
+                pass
+            _embed_cache = (key, time.monotonic(), model)
+    if not model:
+        return None
+    base, _ = _config()
+
+    def embed(text):
+        return _json_request(base + '/api/embeddings', {'model': model, 'prompt': text}, timeout=30).get('embedding')
+    return model, embed
+
+
 def grader():
     provider = status()
     if not provider['available']:

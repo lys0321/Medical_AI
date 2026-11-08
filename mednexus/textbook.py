@@ -15,6 +15,9 @@
   · BM25（术语精确）+ IDF 加权覆盖率（判断该不该拒答）
   · 索引只在首次使用时构建，之后走模块级缓存
   · 覆盖率低于 MIN_COVERAGE 时返回空列表，由上层走拒答/回退
+  · 每段再切成句子并记录字符偏移，结果附带命中句摘录，便于前端只高亮那一句
+  · 可选语义重排：本机 Ollama 有嵌入模型时，仅对已通过拒答门槛的结果按
+    0.5×归一化BM25 + 0.5×cosine 重排；向量相似度不参与“教材里有没有”的判断
 """
 import hashlib
 import io
@@ -28,16 +31,20 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 
 CANDIDATES = [ROOT / "chunks.jsonl", HERE / "data" / "chunks.jsonl"]
+EMBED_CACHE = HERE / "data" / "embeddings.jsonl"
 
 MIN_COVERAGE = 0.30      # 查询词覆盖率下限，低于此值判为“教材里没有”
 TOP_K = 3
+MAX_SENTENCE = 160       # 无标点的长段按固定窗口切，避免整段高亮
 
 _CJK = re.compile(r"[\u4e00-\u9fff]")
 _WORD = re.compile(r"[a-z0-9]+")
 _STOP = set("的了是在和与或有不为以及等这那其即由对可会要将把被")
+_SENTENCE = re.compile(r"[^。！？；!?;\n]+[。！？；!?;]*")
 
 _index = None
 _status = {"loaded": 0, "path": ""}
+_vectors = {}
 
 
 # ---------- 索引构建 ----------
@@ -59,6 +66,30 @@ def _query_terms(query):
     return terms
 
 
+def _sentences(text):
+    """切句并保留偏移：text[start:end] 恒等于句子原文；切分失败时退回整段。"""
+    spans = []
+    for m in _SENTENCE.finditer(text):
+        start, end = m.start(), m.end()
+        while start < end and text[start].isspace():
+            start += 1
+        while end > start and text[end - 1].isspace():
+            end -= 1
+        for cut in range(start, end, MAX_SENTENCE):
+            spans.append((cut, min(cut + MAX_SENTENCE, end)))
+    return spans or [(0, len(text))]
+
+
+def _excerpt(source, spans, terms):
+    """命中查询词最多的一句；并列取靠前的句子。"""
+    text = source["text"]
+    counts = [sum(t in text[a:b] for t in terms) for a, b in spans]
+    best = max(range(len(spans)), key=lambda i: (counts[i], -i))
+    start, end = spans[best]
+    return {"text": text[start:end], "start": start, "end": end, "index": best,
+            "matched": counts[best], "page": source["page"]}
+
+
 def _find_index_file():
     for p in CANDIDATES:
         if p.is_file() and p.stat().st_size > 0:
@@ -71,7 +102,7 @@ def _build():
     path = _find_index_file()
     if path is None:
         _status["loaded"] = 0
-        _index = {"sources": [], "postings": {}, "df": {}, "len": [], "avg": 1.0}
+        _index = {"sources": [], "sentences": [], "postings": {}, "df": {}, "len": [], "avg": 1.0}
         return _index
 
     sources = []
@@ -119,7 +150,9 @@ def _build():
             df[t] += 1
     avg = (sum(lengths) / len(lengths)) if lengths else 1.0
 
-    _index = {"sources": sources, "postings": postings, "df": df, "len": lengths, "avg": avg}
+    # 句子偏移单独存放，不混进 source 记录，避免随来源列表下发给其他接口
+    sentences = [_sentences(s["text"]) for s in sources]
+    _index = {"sources": sources, "sentences": sentences, "postings": postings, "df": df, "len": lengths, "avg": avg}
     _status["loaded"] = len(sources)
     _status["path"] = str(path)
     return _index
@@ -140,7 +173,97 @@ def status():
 def reload():
     global _index
     _index = None
+    _vectors.clear()
     return ensure()
+
+
+# ---------- 可选语义重排 ----------
+
+def _embedder():
+    try:
+        import tutor_model
+        return tutor_model.embedder()
+    except Exception:
+        return None
+
+
+def _vector(value):
+    if not isinstance(value, list) or not value:
+        return None
+    if not all(isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x) for x in value):
+        return None
+    return [float(x) for x in value]
+
+
+def _cache_key(model, text):
+    return hashlib.sha256((model + "\n" + text).encode("utf-8")).hexdigest()[:32]
+
+
+def _cached_vectors(model):
+    """读取嵌入缓存；坏行、别的模型或非数值向量一律跳过。"""
+    if model in _vectors:
+        return _vectors[model]
+    found = {}
+    try:
+        lines = EMBED_CACHE.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        lines = []
+    for line in lines:
+        try:
+            rec = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(rec, dict) and rec.get("model") == model and isinstance(rec.get("key"), str):
+            vec = _vector(rec.get("vector"))
+            if vec:
+                found[rec["key"]] = vec
+    _vectors[model] = found
+    return found
+
+
+def _cosine(a, b):
+    na = math.sqrt(sum(x * x for x in a))
+    nb = math.sqrt(sum(x * x for x in b))
+    if not na or not nb:
+        raise ValueError("零向量")
+    return sum(x * y for x, y in zip(a, b)) / (na * nb)
+
+
+def _semantic(query, items):
+    """返回每条的 cosine；任何异常、缺向量或维度不一致都返回 None，调用方退回纯 BM25。"""
+    found = _embedder()
+    if not found:
+        return None
+    model, embed = found
+    try:
+        qv = _vector(embed(query))
+        if qv is None:
+            return None
+        cache = _cached_vectors(model)
+        scores, fresh = [], []
+        for s in items:
+            key = _cache_key(model, s["text"])
+            vec = cache.get(key)
+            if vec is None:
+                vec = _vector(embed(s["text"]))
+                if vec is None:
+                    return None
+                cache[key] = vec
+                fresh.append({"key": key, "model": model, "id": s["id"], "dim": len(vec), "vector": vec})
+            if len(vec) != len(qv):
+                return None
+            scores.append(_cosine(qv, vec))
+    except Exception:
+        return None
+    if fresh:
+        try:
+            EMBED_CACHE.parent.mkdir(parents=True, exist_ok=True)
+            with io.open(EMBED_CACHE, "a", encoding="utf-8") as f:
+                for rec in fresh:
+                    f.write(json.dumps(rec) + "\n")
+        except OSError:
+            pass
+    return scores
 
 
 # ---------- 检索 ----------
@@ -193,9 +316,19 @@ def search(query, top_k=TOP_K):
         cov = got / total_w if total_w else 0.0
         # 双重门槛：覆盖率达标 + 至少命中 2 个不同查询词，挡住单点误命中
         if cov >= MIN_COVERAGE and matched >= 2:
-            out.append((sc, {**s, "coverage": round(cov, 3)}))
+            spans = idx["sentences"][did] if did < len(idx.get("sentences", [])) else _sentences(blade)
+            out.append((sc, {**s, "coverage": round(cov, 3), "excerpt": _excerpt(s, spans, terms)}))
 
     out.sort(key=lambda x: -x[0])
+    # 语义分只在门槛之后参与排序：向量相似度不能把没通过覆盖率的段落变成“教材依据”
+    cosines = _semantic(query, [item for _, item in out]) if out else None
+    if cosines is not None:
+        top = out[0][0] or 1.0
+        mixed = []
+        for (sc, item), cos in zip(out, cosines):
+            hybrid = 0.5 * (sc / top) + 0.5 * max(cos, 0.0)
+            mixed.append((hybrid, {**item, "retrieval": "hybrid", "semantic": round(cos, 3)}))
+        out = sorted(mixed, key=lambda x: -x[0])
     return [item for _, item in out[:top_k]]
 
 
