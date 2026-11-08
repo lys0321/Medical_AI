@@ -99,7 +99,12 @@ function showView(name, { restoreTask = true } = {}) {
     if (restoreTask && quizPhase === "empty") resumeActiveTask();
   }
   if (name === "quicknotes") loadQuicknotes();
-  if (name === "materials" && typeof loadCourseMaterials === "function") loadCourseMaterials();
+  if (name === "materials") {
+    const quizPanel = $("imageQuizPanel");
+    if (quizPanel) quizPanel.hidden = false;
+    if (typeof mountImageQuiz === "function") mountImageQuiz($("imageQuiz"));
+    if (typeof loadCourseMaterials === "function") loadCourseMaterials();
+  }
   if (name === "books" && overviewData) renderBooks(overviewData);
   if (name === "me" && overviewData) renderStatus(overviewData);
   const nextHash = name === "home" ? "" : "#" + name;
