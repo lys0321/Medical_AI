@@ -142,6 +142,48 @@ python server.py --open
 
 **引文导出**：`/api/export-citations` 按检索缓存输出 BibTeX 或 RIS。缺卷期页码就不写，不补造；不在缓存里的 PMID 直接拒绝。界面提供“复制 BibTeX / 复制 RIS”。
 
+## 代码结构与请求观测（2026-11-08）
+
+`server.py` 原来是一个约 1500 行的单文件，现在按域拆到 `mednexus/api/`，HTTP 契约与 `/api/*` 路径**完全不变**：
+
+```text
+mednexus/
+  server.py            入口与兼容层：`python server.py` 照旧可用，旧名字照旧可导入
+  api/routing.py       路由、request_id、耗时日志、SSE 流式辅导
+  api/core.py          共享底座：路径、锁、SQLite 连接、学习状态读写
+  api/task.py          出题、恢复、提示、多轮辅导
+  api/answer.py        三要点选择题判分、自由文本判分
+  api/study.py         资料来源、检索、补学、导入、组胚识图
+  api/ask.py           自由提问与教材依据
+  api/research.py      PubMed、PMC 全文、证据字段、引文导出
+  api/report.py        快照、学习报告、导出、首页总览
+```
+
+拆分只搬代码、不改逻辑：函数体原样迁移，335 项既有测试**一行未改**全部通过，这是“契约没变”的证据。`server.py` 保留了兼容层——`server.DB_PATH = ...`、`server.pubmed = ...` 这类既有写法仍会作用到真正被调用的实现，所以老测试夹具不需要改。
+
+**请求日志**：每个请求生成 12 位 `request_id`，响应头带 `X-Request-Id`，stderr 打一行
+
+```text
+[http] POST /api/tutor -> 200 42.3ms rid=6b546849d44c
+```
+
+只记方法、路径、状态码、耗时和 rid。查询串、请求体、学习内容、令牌一律不记（`test_routing` 有断言）。
+
+**SSE 流式辅导**：`POST /api/tutor/stream` 返回 `text/event-stream`，事件顺序为 `meta` → 若干 `chunk` → `done`。原来的 `POST /api/tutor` 不变，前端不支持流式时自动回退。
+
+```text
+event: meta
+data: {"request_id":"…","mode":"本地资料对话","warning":""}
+
+event: chunk
+data: {"text":"瞳孔不一定散大，因为…"}
+
+event: done
+data: {"messages":[…],"remaining":11}
+```
+
+**注意**：模型输出先经过引用校验，再分段下发——不是把未校验的模型 token 直接透传给页面。前端在收到 `done` 之前只显示正文，来源与模式在完成后再渲染。
+
 ## 内容和能力边界
 
 这是可运行、可扩展的原型，不是经过医学教师审核的正式教学平台。

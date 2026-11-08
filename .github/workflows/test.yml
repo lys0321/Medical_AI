@@ -1,0 +1,49 @@
+name: tests
+
+# 只跑两套既有回归：Python 标准库 unittest 与 Node 内置 test runner。
+# 项目不依赖任何第三方包，所以没有 pip/npm install 步骤。
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  python:
+    name: Python 回归
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: 运行 unittest
+        working-directory: mednexus
+        run: python -m unittest discover -s tests -v
+
+  node:
+    name: 前端流程回归
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: 运行 node --test
+        run: node --test mednexus/tests/*.test.mjs
+
+  syntax:
+    name: 语法与空白检查
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: 编译全部 Python 文件
+        run: python -m compileall -q mednexus tools
+      - name: 检查多余空白
+        run: git diff --check "$(git rev-list --max-parents=0 HEAD)" HEAD
