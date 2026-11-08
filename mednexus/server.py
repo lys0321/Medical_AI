@@ -1197,10 +1197,37 @@ def pubmed_compat(db, learner, body, request=None):
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "MedNexus/1.0"
+    _body_handled = False
 
     def log_message(self, fmt, *args):
         # Do not log learner queries, answers, tokens, or provider credentials.
         return
+
+    def _discard_request_body(self):
+        """提前拒绝请求前把请求体读掉。
+
+        请求体没读完就关闭连接时，Windows 会直接发 RST，客户端可能连已经写好的
+        403/415 响应都读不到，表现为随机的 ConnectionResetError。这里只按声明的
+        长度丢弃数据，不缓存内容、不记录内容。
+        """
+        if getattr(self, "_body_handled", False):
+            return
+        self._body_handled = True
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except (TypeError, ValueError):
+            return
+        if not 0 < length <= 2_000_000:
+            return
+        try:
+            original = self.connection.gettimeout()
+            self.connection.settimeout(1.0)
+            try:
+                self.rfile.read(length)
+            finally:
+                self.connection.settimeout(original)
+        except OSError:
+            self.close_connection = True
 
     def allowed(self):
         """同源校验：默认只允许本机；绑定 0.0.0.0 时额外允许内网 IP，便于局域网演示。"""
@@ -1220,6 +1247,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def send(self, payload, status=200):
         raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        if getattr(self, "command", "") == "POST":
+            self._discard_request_body()
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(raw)))
@@ -1337,6 +1366,7 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", "0"))
             if not 1 <= length <= 2_000_000:
                 raise InputError("请求大小需在 1 字节至 2 MB 之间")
+            self._body_handled = True
             body = json.loads(self.rfile.read(length))
             if not isinstance(body, dict):
                 raise InputError("请求格式应为 JSON 对象")
