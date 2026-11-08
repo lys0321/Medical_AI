@@ -149,13 +149,15 @@ def progress(db, learner):
 
 
 def recommend(items):
+    # 课程包被整包判为不可用时 items 可能为空，这里必须给调用方一个明确的 None，
+    # 而不是 IndexError——空课程也要能打开页面看到报错，而不是 500。
     weak = [i for i in items if i["status"] == "需巩固"]
     if weak:
         return min(weak, key=lambda i: i["score"])
     uncertain = [i for i in items if i["status"] == "初步达标"]
     if uncertain:
         return uncertain[0]
-    return next((i for i in items if i["status"] == "未测评"), items[0])
+    return next((i for i in items if i["status"] == "未测评"), items[0] if items else None)
 
 
 def public_active(active):

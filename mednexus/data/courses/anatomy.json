@@ -69,7 +69,10 @@
         "外下斜"
       ],
       "research": "不同病因的动眼神经麻痹，瞳孔受累的模式与机制是否存在差异？",
-      "syllabus_refs": []
+      "syllabus_refs": [
+        "syllabus-290",
+        "syllabus-292"
+      ]
     },
     {
       "id": "light",
@@ -87,7 +90,9 @@
         "light reflex"
       ],
       "research": "瞳孔反应的定量测量能否补充传统的床旁观察？",
-      "syllabus_refs": []
+      "syllabus_refs": [
+        "syllabus-333"
+      ]
     },
     {
       "id": "abducens",
@@ -103,7 +108,10 @@
         "abducens"
       ],
       "research": "展神经麻痹的恢复过程与病因、随访时间有什么关系？",
-      "syllabus_refs": []
+      "syllabus_refs": [
+        "syllabus-290",
+        "syllabus-292"
+      ]
     },
     {
       "id": "trochlear",
@@ -119,7 +127,9 @@
         "trochlear"
       ],
       "research": "滑车神经麻痹的功能代偿如何影响眼位检查的解释？",
-      "syllabus_refs": []
+      "syllabus_refs": [
+        "syllabus-290"
+      ]
     },
     {
       "id": "trigeminal",
@@ -136,7 +146,9 @@
         "trigeminal"
       ],
       "research": "三叉神经相关疼痛中，神经压迫与症状的关系应怎样验证？",
-      "syllabus_refs": []
+      "syllabus_refs": [
+        "syllabus-290"
+      ]
     },
     {
       "id": "corneal",
@@ -153,7 +165,9 @@
         "corneal reflex"
       ],
       "research": "角膜感觉与眨眼反射的定量检测能否提供互补信息？",
-      "syllabus_refs": []
+      "syllabus_refs": [
+        "syllabus-290"
+      ]
     },
     {
       "id": "facial",
@@ -171,7 +185,10 @@
         "周围性"
       ],
       "research": "面神经损伤后的功能恢复，用哪些结局指标评估更合适？",
-      "syllabus_refs": []
+      "syllabus_refs": [
+        "syllabus-290",
+        "syllabus-292"
+      ]
     },
     {
       "id": "gag",
@@ -188,7 +205,9 @@
         "吞咽"
       ],
       "research": "咽反射表现与吞咽功能之间的关系，能否用研究证据检验？",
-      "syllabus_refs": []
+      "syllabus_refs": [
+        "syllabus-290"
+      ]
     },
     {
       "id": "accessory",
@@ -205,7 +224,10 @@
         "accessory nerve"
       ],
       "research": "副神经损伤后，不同功能评价工具是否测量了相同的恢复维度？",
-      "syllabus_refs": []
+      "syllabus_refs": [
+        "syllabus-290",
+        "syllabus-292"
+      ]
     },
     {
       "id": "hypoglossal",
@@ -222,7 +244,10 @@
         "hypoglossal"
       ],
       "research": "不同定位的舌下神经损伤，影像与功能表现如何相互印证？",
-      "syllabus_refs": []
+      "syllabus_refs": [
+        "syllabus-290",
+        "syllabus-292"
+      ]
     }
   ],
   "questions": [
