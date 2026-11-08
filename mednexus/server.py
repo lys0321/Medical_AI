@@ -39,7 +39,8 @@ from api.answer import (grade, answer_text, text_excerpts)
 from api.study import (builtins, textbook_sources, all_sources, tokenize, retrieve, verify_citation, study_payload, import_sources, image_attempts, image_stats, image_quiz)
 from api.ask import (model_json, ask, ask_compat, _textbook_key_points)
 from api.research import (research_gate, ncbi_get, ncbi_get_url, windows_https_get, xmltext, pubmed, cached_paper, fetch_fulltext, export_citations, _check_research_privacy, research_query_for, research_request, pubmed_compat)
-from api.report import (snapshot, report, export_learning, reset_learning, _book_stats, _recent, _weak, overview_payload)
+from api.report import (snapshot, report, export_learning, reset_learning, _book_stats, _recent, _weak, overview_payload,
+                        record_study_seconds, time_stats, unit_stats)
 from api.routing import Handler, main, ThreadingHTTPServer
 import api.task as _task
 import api.answer as _answer

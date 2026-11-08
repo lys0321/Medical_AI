@@ -661,3 +661,141 @@ svg { width: 1.2em; height: 1.2em; fill: none; stroke: currentColor; stroke-widt
   .quicknote-card { padding: 18px; }
   .quicknote-cue { font-size: 18px; }
 }
+
+/* ---------- 个人中心：学习数据 ---------- */
+.home-ask-hint {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  color: var(--muted); font-size: 13px; margin: 14px 0 0;
+}
+.profile-card {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 18px;
+  padding: 22px 24px; margin-top: 16px;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: linear-gradient(120deg, #f7fbff 0%, #eef5ff 55%, #f8fbff 100%);
+  box-shadow: var(--shadow-sm);
+}
+.profile-avatar {
+  display: grid; place-items: center; flex: 0 0 auto;
+  width: 72px; height: 72px; border-radius: 50%;
+  background: #fff; color: var(--blue); border: 1px solid #dbe8ff;
+}
+.profile-avatar svg { width: 34px; height: 34px; }
+.profile-main { flex: 1 1 auto; min-width: 0; }
+.profile-name-row { display: flex; align-items: center; gap: 10px; }
+.profile-name-row h2 { font-size: 20px; font-weight: 700; margin: 0; }
+.profile-school { color: var(--ink-2); font-size: 13.5px; margin: 6px 0 0; }
+.profile-motto { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+.profile-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.profile-watermark {
+  position: absolute; right: 22px; top: 18px;
+  font-size: 13px; font-style: italic; letter-spacing: .5px;
+  color: #bfd4f5; pointer-events: none;
+}
+.me-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 16px; }
+.me-stat {
+  padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: #fff; box-shadow: var(--shadow-sm);
+}
+.me-stat-top { display: flex; align-items: center; gap: 9px; }
+.me-stat-icon {
+  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px;
+  background: var(--blue-soft); color: var(--blue);
+}
+.me-stat-icon svg { width: 17px; height: 17px; }
+.me-stat-label { color: var(--ink-2); font-size: 13px; }
+.me-stat-value { margin-top: 10px; display: flex; align-items: baseline; gap: 5px; }
+.me-stat-value strong { font-size: 26px; font-weight: 700; letter-spacing: -.5px; }
+.me-stat-value span { color: var(--muted); font-size: 12.5px; }
+.me-stat-bar { height: 6px; border-radius: 99px; background: #eaf1fd; margin-top: 10px; overflow: hidden; }
+.me-stat-bar i { display: block; height: 100%; border-radius: 99px; background: var(--blue); }
+.me-stat-note { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+.me-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; margin-top: 16px; }
+.me-progress #meProgressBody { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.ring {
+  --pct: 0%;
+  flex: 0 0 auto; width: 128px; height: 128px; border-radius: 50%;
+  background: conic-gradient(var(--blue) var(--pct), #e8f0fe var(--pct));
+  display: grid; place-items: center;
+}
+.ring-inner {
+  width: 96px; height: 96px; border-radius: 50%; background: #fff;
+  display: grid; place-items: center; text-align: center; align-content: center;
+}
+.ring-inner strong { font-size: 24px; }
+.ring-inner span { color: var(--muted); font-size: 11.5px; }
+.unit-list { flex: 1 1 220px; display: grid; gap: 12px; }
+.unit-row-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.unit-row-head b { font-size: 13.5px; font-weight: 600; }
+.unit-row-head .count { color: var(--muted); font-size: 12px; }
+.unit-bar { height: 7px; border-radius: 99px; background: #eef3fc; margin-top: 7px; overflow: hidden; }
+.unit-bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #7ea8f8, var(--blue)); }
+.week-chart { display: flex; align-items: flex-end; gap: 10px; height: 150px; margin-top: 14px; }
+.week-col { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+.week-bar-wrap { flex: 1 1 auto; display: flex; align-items: flex-end; width: 100%; }
+.week-bar { width: 100%; border-radius: 8px 8px 3px 3px; background: linear-gradient(180deg, #9dc0fb, var(--blue)); min-height: 2px; }
+.week-val { color: var(--ink-2); font-size: 11px; min-height: 14px; }
+.week-day { color: var(--muted); font-size: 10.5px; }
+.badge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.badge {
+  display: flex; align-items: center; gap: 11px; padding: 12px 14px;
+  border: 1px dashed var(--line); border-radius: 14px; background: #fbfdff; opacity: .62;
+}
+.badge.is-on { opacity: 1; border-style: solid; background: #fff; box-shadow: var(--shadow-sm); }
+.badge-icon {
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%;
+  background: var(--amber-soft); color: var(--amber); flex: 0 0 auto;
+}
+.badge-icon svg { width: 17px; height: 17px; }
+.badge-text { display: flex; flex-direction: column; min-width: 0; }
+.badge-text b { font-size: 13px; }
+.badge-text span { color: var(--muted); font-size: 11.5px; }
+
+/* ---------- 学习评估：章节选择与内联答疑 ---------- */
+.chapter-picker { margin-bottom: 16px; }
+.chapter-picker .panel-head h3 small { margin-left: 8px; }
+.quiz-ask { margin-top: 16px; }
+.quiz-ask .askbar.small { margin-top: 10px; }
+.quiz-ask-result { margin-top: 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: #fbfdff; }
+.quiz-ask-head { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.quiz-ask-answer { font-size: 14px; line-height: 1.75; margin: 0 0 12px; white-space: pre-wrap; }
+.quiz-ask-answer.is-refused { color: #b4552f; }
+.quiz-ask-cites { display: grid; gap: 8px; }
+.btn-ghost {
+  background: #fff; border: 1px solid var(--line); color: var(--ink-2);
+}
+.btn-ghost:hover { border-color: #b9cdf1; color: var(--blue-deep); }
+.btn.small { padding: 5px 11px; font-size: 12.5px; }
+
+@media (max-width: 900px) {
+  .me-stats { grid-template-columns: repeat(2, 1fr); }
+  .me-grid { grid-template-columns: 1fr; }
+  .badge-grid { grid-template-columns: 1fr 1fr; }
+  .profile-watermark { display: none; }
+}
+
+/* 教材答疑：顶部两张说明卡 */
+.ask-guide { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+.ask-guide .panel { padding: 20px 22px; }
+.ask-guide .study-source { margin: 0; line-height: 1.75; }
+.ask-guide .chips { margin: 10px 0 10px; }
+@media (max-width: 900px) {
+  .ask-guide { grid-template-columns: 1fr; }
+}
+
+/* 拒答时的术语检索建议 */
+.quiz-ask-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f4f8ff;
+  border: 1px dashed #c8dafb;
+}
+.quiz-ask-suggest-label {
+  font-size: 12.5px;
+  color: var(--muted);
+}

@@ -129,6 +129,7 @@ def ask_compat(db, learner, body):
             and ("小胶质细胞" not in question or "小胶质细胞" in s["text"]
                  or "microglia" in s["text"].lower())]
     cites = []
+    suggested = []
     for source in hits[:3]:
         excerpt = _textbook_key_points(question, source["text"])
         original = next((s for s in sources if s["id"] == source["id"]
@@ -165,14 +166,26 @@ def ask_compat(db, learner, body):
                     tips.insert(0, "模型认为这段原文没有直接回答你的问题；"
                                    "上面给的是原文本身，请自己判断够不够用。")
     else:
-        answer = "本地教材索引尚未找到与这个问题对应的可核对书页。请导入包含该主题、书名和页码的教材内容后再试；目前不能编造页码或课本总结。"
+        answer = ("教材里没有检索到与这句话直接对应的原文段落，这次不能编造页码，"
+                  "也不做课本总结。可以换一种说法再问一次，或者点题目里的"
+                  "「这题在教材哪一页」直接翻书核对。")
         tips = ["仍可自愿进入文献漫游，查看 PubMed 的真实研究；文献不能代替教材页码。"]
         mode = "拒答"
+        # 拒答时给一条“用教材里的词再问一次”的建议：学生按自己的说法提问，
+        # 而检索用的是教材术语。只在答疑带了 concept 时给，避免凭空猜测。
+        concept_id = body.get("concept")
+        if isinstance(concept_id, str) and concept_id in CONCEPT_MAP:
+            terms = [t for t in (CONCEPT_MAP[concept_id].get("terms") or []) if t]
+            if len(terms) >= 2:
+                suggestion = " ".join(terms[:3])
+                if suggestion and suggestion not in question:
+                    suggested = [suggestion]
     return {"question": question, "question_id": 0, "answer": answer,
             "mode": mode, "refused": not bool(top),
             "coverage": round(float(hits[0].get("coverage", 0)), 2) if top else 0,
             "expanded": [], "citations": cites, "chunks": hits[:3],
             "papers": [], "pubmed_note": "", "tips": tips,
+            "suggested": suggested if not top else [],
             "wander": {"question": question, "prompt": "要不要深入了解？进入文献漫游查找前沿研究。"}}
 
 
@@ -217,6 +230,41 @@ def _too_close_to_question(answer, question):
     return bool(q) and len(a & q) / len(q) > 0.75
 
 
+def _looks_like_repr(text):
+    """判断文本是不是把字典/列表直接 str() 出来的残渣。
+
+    正常中文回答不会连续出现成对的单引号加冒号；一旦出现就说明模型
+    返回了结构化对象且没被收敛，宁可回落到摘录式，也不把 {'结论': ...}
+    原样展示给学生。
+    """
+    return bool(re.search(r"['\"][^'\"]{1,20}['\"]\s*:", text)) or text.startswith(("{", "["))
+
+
+def _answer_text(value):
+    """把模型返回的 answer 字段收敛成纯文本。
+
+    内置云端接口没有强制 schema 时，模型偶尔会把 answer 写成
+    {"结论": "...", "原文依据": "..."} 这样的对象，直接 str() 会把 Python
+    字典字面量塞进答案卡（曾出现 {'结论': '小胶质细胞…'}）。这里按顺序
+    取其中的文案值拼成段落；取不出来就返回空串，让调用方回落到摘录式。
+    """
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, dict):
+        parts = []
+        for key, item in value.items():
+            text = _answer_text(item)
+            if text:
+                parts.append(text)
+        return "\n".join(parts).strip()
+    if isinstance(value, (list, tuple)):
+        parts = [_answer_text(item) for item in value]
+        return "\n".join([p for p in parts if p]).strip()
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
 def _model_ask_answer(question, excerpt, book, page):
     """让模型把这一页的原文组织成可读回答。
 
@@ -229,6 +277,7 @@ def _model_ask_answer(question, excerpt, book, page):
     system = ("你是临床医学本科生的学习助教。只能依据【教材原文】作答，"
               "不得补充原文没有的事实、数字、药物剂量或页码。"
               "用中文回答，2-4 句，先说结论再指出原文依据。"
+              "answer 必须是普通中文字符串，不要返回 JSON 对象或分点字段。"
               "如果原文确实没有回答这个问题，把 covered 设为 false，"
               "并在 answer 中说明原文讲的是什么、还缺什么。")
     payload = {"问题": question, "书名": book, "页码": page, "教材原文": excerpt}
@@ -243,8 +292,10 @@ def _model_ask_answer(question, excerpt, book, page):
             return None
     if not isinstance(data, dict):
         return None
-    text = str(data.get("answer") or "").strip()
+    text = _answer_text(data.get("answer"))
     if len(text) < 12:
+        return None
+    if _looks_like_repr(text):
         return None
     if _too_close_to_question(text, question):
         return None

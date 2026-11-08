@@ -43,7 +43,7 @@ from api.study import study_payload, import_sources, image_quiz
 from api.ask import ask, ask_compat, model_json
 from api.research import research_gate, pubmed, pubmed_compat, export_citations
 from api.report import (snapshot, report, export_learning, overview_payload,
-                        reset_learning)
+                        reset_learning, record_study_seconds, time_stats)
 
 def start_request(handler):
     """给请求分配 request_id 与计时起点。
@@ -291,6 +291,11 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(body, dict):
                 raise InputError("请求格式应为 JSON 对象")
             path = urllib.parse.urlparse(self.path).path
+            if path == "/api/heartbeat":
+                # 只有页面可见时前端才上报；服务端只做累加，不推断学习行为。
+                with LOCK, connect() as db:
+                    record_study_seconds(db, learner, body.get("seconds"))
+                    return self.send({"ok": True, "learning_time": time_stats(db, learner)})
             if path == '/api/tutor/stream':
                 return self.stream_tutor(learner, body)
             if path == '/api/tutor':

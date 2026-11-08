@@ -81,7 +81,7 @@ async function api(path, payload) {
 }
 
 /* ---------- 视图切换 ---------- */
-const VIEWS = ["home", "learn", "quiz", "quicknotes", "books", "materials", "research", "me"];
+const VIEWS = ["home", "learn", "quiz", "ask", "quicknotes", "books", "materials", "research", "me"];
 
 function showView(name, { restoreTask = true } = {}) {
   if (!VIEWS.includes(name)) name = "home";
@@ -106,7 +106,7 @@ function showView(name, { restoreTask = true } = {}) {
     if (typeof loadCourseMaterials === "function") loadCourseMaterials();
   }
   if (name === "books" && overviewData) renderBooks(overviewData);
-  if (name === "me" && overviewData) renderStatus(overviewData);
+  if (name === "me" && overviewData) renderMe(overviewData);
   const nextHash = name === "home" ? "" : "#" + name;
   if (location.hash !== nextHash) history.pushState(null, "", location.pathname + location.search + nextHash);
 }
@@ -948,7 +948,7 @@ async function refreshOverview() {
     if (document.querySelector("#view-learn.is-active")) renderLearn(overviewData);
     if (document.querySelector("#view-quiz.is-active")) renderQuiz(overviewData);
     if (document.querySelector("#view-books.is-active")) renderBooks(overviewData);
-    if (document.querySelector("#view-me.is-active")) renderStatus(overviewData);
+    if (document.querySelector("#view-me.is-active")) renderMe(overviewData);
   } catch (e) {
     console.warn("overview failed", e);
     renderLearningPlan(overviewData?.learning_plan, e.message);
@@ -984,6 +984,18 @@ $$(".chip", $("chips")).forEach((c) => {
     ask(text);
   });
 });
+
+const askGuides = $("askGuides");
+if (askGuides) {
+  $$(".chip", askGuides).forEach((c) => {
+    c.addEventListener("click", () => {
+      $("q").value = c.textContent.trim();
+      setAskContext(null);
+      $("q").focus();
+      ask($("q").value);
+    });
+  });
+}
 
 $("pmForm").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -1040,6 +1052,7 @@ $$(".quick-card").forEach((card) => {
       return;
     }
     if (act === "quiz") { showView("quiz"); return; }
+    if (act === "ask") { showView("ask"); $("q").focus(); return; }
   });
 });
 
@@ -1050,6 +1063,7 @@ let quizPhase = "empty";
 let quizSubmitting = false;
 let quizLoading = false;
 let quizHintLoading = false;
+let quizUnit = null;
 
 async function resumeActiveTask() {
   if (quizLoading || quizSubmitting || quizHintLoading) return;
@@ -1101,13 +1115,55 @@ function renderQuiz(data) {
     });
   }
 
-  // 知识点选择
+  // 第一步：章节（课程单元）。章节只决定可选知识点，不自动出题。
+  const units = quizUnits(data);
+  if (quizUnit && !units.some((u) => u.name === quizUnit)) quizUnit = null;
+  const unitBox = $("quizUnits");
+  if (unitBox) {
+    unitBox.innerHTML = "";
+    units.forEach((u) => {
+      const b = el("button", "chip", u.name);
+      b.type = "button";
+      const done = u.completed ? " · 已完成" : " · " + u.assessed + "/" + u.total + " 已测评";
+      b.title = u.name + done;
+      b.classList.toggle("is-active", u.name === quizUnit);
+      b.addEventListener("click", () => {
+        quizUnit = quizUnit === u.name ? null : u.name;
+        renderQuiz(overviewData);
+      });
+      unitBox.appendChild(b);
+    });
+    if (!units.length) unitBox.appendChild(el("p", "study-source", "课程单元读取失败，请刷新页面。"));
+  }
+  const chapterHint = $("quizChapterHint");
+  if (chapterHint) {
+    const current = units.find((u) => u.name === quizUnit);
+    chapterHint.textContent = current ? current.name + " · " + current.total + " 个知识点" : "还没有选章节";
+  }
+  const unitNote = $("quizUnitNote");
+  if (unitNote) {
+    const current = units.find((u) => u.name === quizUnit);
+    unitNote.textContent = current
+      ? "本章已测评 " + current.assessed + " / " + current.total + " 个知识点" + (current.completed ? "，可以继续巩固或换章。" : "；本章全部测评完才算完成。")
+      : "章节来自本机课程单元划分；先选一章，再在右侧挑知识点出题。";
+  }
+
+  // 第二步：知识点（按章节过滤）
+  const conceptHint = $("quizConceptHint");
+  if (conceptHint) conceptHint.textContent = quizUnit ? "本章可选" : "先选章节";
   if (box) {
     box.innerHTML = "";
-    (data.concepts || []).forEach((c) => {
+    const pool = (data.concepts || []).filter((c) => !quizUnit || c.unit === quizUnit);
+    if (!quizUnit) {
+      box.appendChild(el("p", "study-source", "先在上面选一个章节，这里会列出该章的知识点。"));
+    } else if (!pool.length) {
+      box.appendChild(el("p", "study-source", "本章还没有可测评的知识点。"));
+    }
+    pool.forEach((c) => {
       const b = el("button", "chip", c.name);
       b.type = "button";
       b.dataset.cid = c.id;
+      b.title = c.status + (c.attempts ? " · " + c.attempts + " 题" : "");
       b.classList.toggle("is-active", c.id === quizConcept);
       b.addEventListener("click", () => {
         loadTask(c.id, "auto");
@@ -1116,7 +1172,7 @@ function renderQuiz(data) {
     });
   }
 
-  // 掌握概览
+  // 掌握概览：仍然给出全部知识点，便于对照
   if (report) {
     report.innerHTML = "";
     (data.concepts || []).forEach((c) => {
@@ -1126,6 +1182,7 @@ function renderQuiz(data) {
       row.appendChild(el("span", null, c.name));
       row.appendChild(el("span", "count", (c.attempts || 0) + " 题"));
       row.addEventListener("click", () => {
+        quizUnit = c.unit || quizUnit;
         loadTask(c.id, "auto");
       });
       report.appendChild(row);
@@ -1135,13 +1192,34 @@ function renderQuiz(data) {
   if (quizPhase === "empty") {
     const area = $("quizArea");
     area.innerHTML = "";
-    area.appendChild(el("p", null, "选择右侧任意知识点，开始三个要点的诊断。"));
-    const start = el("button", "btn btn-primary", "按推荐直接来一道题");
+    if (!quizUnit) {
+      area.appendChild(el("p", null, "先在「第一步」选一个章节，再选知识点出题；也可以直接按推荐来一道。"));
+    } else {
+      const chapter = units.find((u) => u.name === quizUnit);
+      area.appendChild(el("p", null, "已选章节：" + quizUnit + (chapter ? "（已测评 " + chapter.assessed + " / " + chapter.total + "）" : "") + "。在右侧点一个知识点开始出题。"));
+    }
+    const start = el("button", "btn btn-primary", quizUnit ? "按推荐在本章来一道题" : "按推荐直接来一道题");
     start.type = "button";
     start.addEventListener("click", () => loadTask(nextConceptId(), "auto"));
     area.appendChild(start);
     area.appendChild(quizToolbar({ refresh: false }));
   }
+  renderQuizAsk(data);
+}
+
+function quizUnits(data) {
+  if (Array.isArray(data.units) && data.units.length) return data.units;
+  const names = [];
+  (data.concepts || []).forEach((c) => {
+    if (c.unit && !names.includes(c.unit)) names.push(c.unit);
+  });
+  return names.map((name) => {
+    const rows = (data.concepts || []).filter((c) => c.unit === name);
+    const assessed = rows.filter((c) => c.attempts > 0).length;
+    return { name, total: rows.length, assessed, mastered: rows.filter((c) => c.status === "已掌握").length,
+      progress: rows.length ? Math.round(assessed / rows.length * 100) : 0,
+      completed: rows.length > 0 && assessed === rows.length };
+  });
 }
 
 async function loadTask(cid, kind = "auto") {
@@ -1167,10 +1245,11 @@ async function loadTask(cid, kind = "auto") {
 }
 
 function nextConceptId() {
-  const list = (overviewData?.concepts || []).map((c) => c.id).filter(Boolean);
+  const pool = (overviewData?.concepts || []).filter((c) => !quizUnit || c.unit === quizUnit);
+  const list = pool.map((c) => c.id).filter(Boolean);
   if (!list.length) return quizConcept;
   const recommend = overviewData?.recommendation?.id;
-  if (recommend && recommend !== quizConcept) return recommend;
+  if (recommend && list.includes(recommend) && recommend !== quizConcept) return recommend;
   const i = list.indexOf(quizConcept);
   return list[(i + 1) % list.length] || quizConcept;
 }
@@ -1674,6 +1753,309 @@ $("quicknoteReveal").addEventListener("click", () => {
   });
 });
 
+/* ---------- 学习评估内的教材答疑 ---------- */
+let quizAskBusy = false;
+
+function quizAskExamples(data) {
+  const list = [];
+  const concept = (data?.concepts || []).find((c) => c.id === quizConcept);
+  const task = quizTask && quizTask.concept === quizConcept ? quizTask : null;
+  // 优先用当前这道题的三个要点做示例，问句短、能直接命中原文
+  (task?.points || []).slice(0, 2).forEach((p) => {
+    if (p.label) list.push(p.label + "怎么解释？");
+  });
+  if (concept) list.push(shortBook(concept.name) + "在教材哪一页？");
+  if (!list.length && quizUnit) list.push(quizUnit + "这一章最常考什么？");
+  return list.slice(0, 4);
+}
+
+function renderQuizAsk(data) {
+  const chips = $("quizAskChips");
+  if (!chips) return;
+  chips.innerHTML = "";
+  quizAskExamples(data).forEach((text) => {
+    const b = el("button", "chip", text);
+    b.type = "button";
+    b.addEventListener("click", () => {
+      $("quizAskInput").value = text;
+      quizAskSubmit();
+    });
+    chips.appendChild(b);
+  });
+  const input = $("quizAskInput");
+  const concept = (data?.concepts || []).find((c) => c.id === quizConcept);
+  if (input && concept) input.placeholder = "例如：" + concept.name + "为什么会出现这些表现？";
+}
+
+async function quizAskSubmit() {
+  if (quizAskBusy) return;
+  const input = $("quizAskInput");
+  const q = (input?.value || "").trim();
+  if (!q) { toast("先写下你的问题"); input?.focus(); return; }
+  quizAskBusy = true;
+  const status = $("quizAskStatus");
+  const box = $("quizAskResult");
+  status.textContent = "正在教材里找依据，并回查页码…";
+  box.hidden = true;
+  box.innerHTML = "";
+  try {
+    const data = await api("/api/ask", { question: q, concept: quizConcept || null });
+    status.textContent = "";
+    box.hidden = false;
+    const head = el("div", "quiz-ask-head");
+    head.appendChild(el("span", "tag", MODE_TEXT[data.mode] || data.mode || "—"));
+    const ok = (data.citations || []).filter((c) => c.ok).length;
+    head.appendChild(el("span", "tag ghost", "引用 " + ok + "/" + (data.citations || []).length));
+    head.appendChild(el("span", "tag ghost", "覆盖率 " + (data.coverage ?? 0).toFixed(2)));
+    box.appendChild(head);
+    const ans = el("p", "quiz-ask-answer", data.answer || "（无内容）");
+    if (data.refused) ans.classList.add("is-refused");
+    box.appendChild(ans);
+    const cites = el("div", "quiz-ask-cites");
+    (data.citations || []).forEach((c) => {
+      const row = el("div", "cite " + (c.ok ? "ok" : "no"));
+      row.appendChild(icon(c.ok ? "i-check" : "i-x"));
+      const body = el("div");
+      body.appendChild(el("b", null, "《" + c.book + "》" + (c.page ? "第 " + c.page + " 页" : "（无页码）")));
+      if (c.snippet) body.appendChild(el("div", "reason", "「" + c.snippet + "」"));
+      row.appendChild(body);
+      cites.appendChild(row);
+    });
+    if (!(data.citations || []).length) cites.appendChild(el("div", "cite no", "本次回答未使用教材引用"));
+    box.appendChild(cites);
+    // 拒答不等于没救：教材用的是术语，学生用的是自己的说法；给出可点的术语检索建议。
+    if ((data.suggested || []).length) {
+      const row = el("div", "quiz-ask-suggest");
+      row.appendChild(el("span", "quiz-ask-suggest-label", "教材里用的是这些词，点一下再问："));
+      (data.suggested || []).slice(0, 2).forEach((text) => {
+        const chip = el("button", "chip", text);
+        chip.type = "button";
+        chip.addEventListener("click", () => {
+          $("quizAskInput").value = text;
+          quizAskSubmit();
+        });
+        row.appendChild(chip);
+      });
+      box.appendChild(row);
+    }
+    if (data.refused) toast("教材里没找到可核对的依据，已拒答");
+  } catch (e) {
+    status.textContent = "提问失败：" + e.message;
+  } finally {
+    quizAskBusy = false;
+  }
+}
+
+const quizAskForm = $("quizAskForm");
+if (quizAskForm) {
+  quizAskForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    quizAskSubmit();
+  });
+}
+
+/* ---------- 个人中心：学习数据 ---------- */
+function renderMe(data) {
+  if (!data) return;
+  renderProfileCard(data);
+  renderMeStats(data);
+  renderMeProgress(data);
+  renderMeWeek(data);
+  renderMeBadges(data);
+  renderStatus(data);
+}
+
+function renderProfileCard(data) {
+  const box = $("profileCard");
+  if (!box) return;
+  box.innerHTML = "";
+  const avatar = el("div", "profile-avatar");
+  avatar.appendChild(icon("i-user"));
+  box.appendChild(avatar);
+  const main = el("div", "profile-main");
+  const nameRow = el("div", "profile-name-row");
+  nameRow.appendChild(el("h2", null, "同学"));
+  const edit = el("button", "btn btn-ghost small", "修改信息");
+  edit.type = "button";
+  edit.addEventListener("click", () => toast("学习身份由本浏览器匿名生成，不上传姓名与学号；换浏览器即视为另一位同学。"));
+  nameRow.appendChild(edit);
+  main.appendChild(nameRow);
+  main.appendChild(el("p", "profile-school", "郑州大学 · 临床医学 · 大二"));
+  main.appendChild(el("p", "profile-motto", "慢慢来，会变好的。"));
+  const tags = el("div", "profile-tags");
+  ["临床医学", "教材可溯源", "学习记录在本机"].forEach((t) => tags.appendChild(el("span", "tag ghost", t)));
+  main.appendChild(tags);
+  box.appendChild(main);
+  const mark = el("div", "profile-watermark", "Better me · Better future");
+  box.appendChild(mark);
+}
+
+function renderMeStats(data) {
+  const box = $("meStats");
+  if (!box) return;
+  const lt = data.learning_time || {};
+  const st = data.stats || {};
+  const units = data.units || [];
+  const doneUnits = units.filter((u) => u.completed).length;
+  const totalMinutes = lt.total_minutes || 0;
+  const hours = (totalMinutes / 60).toFixed(1);
+  const weekMinutes = lt.week_minutes || 0;
+  const cards = [
+    { icon: "i-clock", label: "累计学习时长", value: hours, unit: "小时",
+      note: "本周 " + weekMinutes + " 分钟" + (lt.today_minutes ? " · 今日 " + lt.today_minutes + " 分钟" : " · 今日还没计时") },
+    { icon: "i-learn", label: "已学知识点", value: (st.assessed || 0) + " / " + (st.total || 0), unit: "",
+      note: "已掌握 " + (st.mastered || 0) + " 个 · 需巩固 " + (st.weak || 0) + " 个" },
+    { icon: "i-books", label: "已完成章节", value: doneUnits + " / " + units.length, unit: "",
+      note: units.length ? "按测评过的知识点计算" : "暂无章节数据", progress: units.length ? Math.round(doneUnits / units.length * 100) : 0 },
+    { icon: "i-flask", label: "连续学习天数", value: lt.streak_days || 0, unit: "天",
+      note: "累计有记录 " + (lt.active_days ?? 0) + " 天" },
+  ];
+  box.innerHTML = "";
+  cards.forEach((c) => {
+    const card = el("article", "me-stat");
+    const top = el("div", "me-stat-top");
+    top.appendChild(el("span", "me-stat-icon", null)).appendChild(icon(c.icon));
+    top.appendChild(el("span", "me-stat-label", c.label));
+    card.appendChild(top);
+    const val = el("div", "me-stat-value");
+    val.appendChild(el("strong", null, String(c.value)));
+    if (c.unit) val.appendChild(el("span", null, c.unit));
+    card.appendChild(val);
+    if (typeof c.progress === "number") {
+      const bar = el("div", "me-stat-bar");
+      const fill = el("i");
+      fill.style.width = Math.min(100, Math.max(0, c.progress)) + "%";
+      bar.appendChild(fill);
+      card.appendChild(bar);
+    }
+    card.appendChild(el("p", "me-stat-note", c.note));
+    box.appendChild(card);
+  });
+}
+
+function renderMeProgress(data) {
+  const box = $("meProgressBody");
+  if (!box) return;
+  box.innerHTML = "";
+  const units = data.units || [];
+  if (!units.length) {
+    box.appendChild(el("p", "study-source", "还没有章节数据。"));
+    return;
+  }
+  const total = units.reduce((s, u) => s + u.total, 0);
+  const assessed = units.reduce((s, u) => s + u.assessed, 0);
+  const pct = total ? Math.round(assessed / total * 100) : 0;
+  const ring = el("div", "ring");
+  ring.style.setProperty("--pct", pct + "%");
+  const inner = el("div", "ring-inner");
+  inner.appendChild(el("strong", null, pct + "%"));
+  inner.appendChild(el("span", null, "总体完成度"));
+  ring.appendChild(inner);
+  box.appendChild(ring);
+  const list = el("div", "unit-list");
+  units.forEach((u) => {
+    const row = el("div", "unit-row");
+    const head = el("div", "unit-row-head");
+    head.appendChild(el("b", null, u.name));
+    head.appendChild(el("span", "count", u.assessed + " / " + u.total + (u.completed ? " · 已完成" : "")));
+    row.appendChild(head);
+    const bar = el("div", "unit-bar");
+    const fill = el("i");
+    fill.style.width = Math.min(100, Math.max(0, u.progress || 0)) + "%";
+    bar.appendChild(fill);
+    row.appendChild(bar);
+    list.appendChild(row);
+  });
+  box.appendChild(list);
+}
+
+function renderMeWeek(data) {
+  const box = $("meWeekChart");
+  if (!box) return;
+  const lt = data.learning_time || {};
+  const series = lt.series || [];
+  const label = $("meWeekTotal");
+  if (label) label.textContent = "本周 " + (lt.week_minutes || 0) + " 分钟";
+  box.innerHTML = "";
+  if (!series.length) {
+    box.appendChild(el("p", "study-source", "还没有学习时长记录。"));
+    return;
+  }
+  const max = Math.max(1, ...series.map((s) => s.minutes || 0));
+  series.forEach((s) => {
+    const col = el("div", "week-col");
+    const mins = s.minutes || 0;
+    const barWrap = el("div", "week-bar-wrap");
+    const bar = el("div", "week-bar");
+    bar.style.height = Math.max(mins ? 6 : 2, Math.round(mins / max * 100)) + "%";
+    if (mins) bar.title = s.date + " · " + mins + " 分钟";
+    barWrap.appendChild(bar);
+    col.appendChild(barWrap);
+    col.appendChild(el("span", "week-val", mins ? String(mins) : ""));
+    col.appendChild(el("span", "week-day", (s.date || "").slice(5)));
+    box.appendChild(col);
+  });
+}
+
+function renderMeBadges(data) {
+  const box = $("meAchievements");
+  if (!box) return;
+  const lt = data.learning_time || {};
+  const st = data.stats || {};
+  const units = data.units || [];
+  const badges = [
+    { name: "初次测评", desc: "完成第一道诊断题", on: (st.attempts || 0) > 0 },
+    { name: "学习半小时", desc: "累计学习时长满 30 分钟", on: (lt.total_minutes || 0) >= 30 },
+    { name: "连续三天", desc: "连续 3 天有学习记录", on: (lt.streak_days || 0) >= 3 },
+    { name: "掌握一个", desc: "至少 1 个知识点评为已掌握", on: (st.mastered || 0) >= 1 },
+    { name: "完成一章", desc: "某一章的知识点全部测评过", on: units.some((u) => u.completed) },
+    { name: "全章通关", desc: "所有章节的测评都完成", on: units.length > 0 && units.every((u) => u.completed) },
+  ];
+  box.innerHTML = "";
+  badges.forEach((b) => {
+    const card = el("div", "badge" + (b.on ? " is-on" : ""));
+    card.appendChild(el("div", "badge-icon", null)).appendChild(icon(b.on ? "i-spark" : "i-bell"));
+    const text = el("div", "badge-text");
+    text.appendChild(el("b", null, b.name));
+    text.appendChild(el("span", null, b.desc));
+    card.appendChild(text);
+    box.appendChild(card);
+  });
+}
+
+/* ---------- 学习时长心跳：只在页面可见时计时 ---------- */
+const HEARTBEAT_SECONDS = 60;
+let heartbeatTimer = null;
+let pendingSeconds = 0;
+
+async function flushHeartbeat() {
+  const seconds = Math.round(pendingSeconds);
+  if (seconds < 1) return;
+  pendingSeconds = 0;
+  try {
+    const data = await api("/api/heartbeat", { seconds: Math.min(600, seconds) });
+    if (overviewData && data?.learning_time) {
+      overviewData.learning_time = data.learning_time;
+      if (document.querySelector("#view-me.is-active")) renderMe(overviewData);
+    }
+  } catch (_) {
+    /* 计时失败不影响学习，静默丢弃这一段 */
+  }
+}
+
+function startHeartbeat() {
+  if (heartbeatTimer) clearInterval(heartbeatTimer);
+  heartbeatTimer = setInterval(() => {
+    if (document.visibilityState !== "visible") return;
+    pendingSeconds += HEARTBEAT_SECONDS;
+    flushHeartbeat();
+  }, HEARTBEAT_SECONDS * 1000);
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") flushHeartbeat();
+});
+
 /* ---------- 启动 ---------- */
 (async function init() {
   await refreshOverview();
@@ -1683,6 +2065,8 @@ $("quicknoteReveal").addEventListener("click", () => {
   if (hash && VIEWS.includes(hash)) showView(hash);
   if (preset) {
     $("q").value = preset;
+    showView("ask");
     ask(preset);
   }
+  startHeartbeat();
 })();

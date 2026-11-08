@@ -126,6 +126,8 @@ def init_db():
           concept TEXT, question TEXT, payload TEXT NOT NULL, created REAL);
         CREATE TABLE IF NOT EXISTS fulltext(pmid TEXT PRIMARY KEY, pmcid TEXT, license TEXT,
           status TEXT, payload TEXT NOT NULL, created REAL);
+        CREATE TABLE IF NOT EXISTS study_time(learner TEXT, day TEXT, seconds REAL NOT NULL,
+          PRIMARY KEY(learner,day));
         """)
 
 

@@ -45,6 +45,7 @@
       <button class="nav-item is-active" data-view="home"><svg><use href="#i-home"></use></svg><span>首页</span></button>
       <button class="nav-item" data-view="learn"><svg><use href="#i-learn"></use></svg><span>我的学习</span></button>
       <button class="nav-item" data-view="quiz"><svg><use href="#i-clip"></use></svg><span>学习评估</span></button>
+        <button class="nav-item" data-view="ask"><svg><use href="#i-spark"></use></svg><span>教材答疑</span></button>
       <button class="nav-item" data-view="quicknotes"><svg><use href="#i-learn"></use></svg><span>速记自测</span></button>
       <button class="nav-item" data-view="books"><svg><use href="#i-books"></use></svg><span>知识库</span></button>
       <button class="nav-item" data-view="materials"><svg><use href="#i-books"></use></svg><span>课程资料与题库</span></button>
@@ -88,18 +89,76 @@
         <p class="study-source" role="status">正在读取学习计划…</p>
       </article>
 
+      <p class="home-ask-hint">想直接问教材？<button class="link" data-view="ask" type="button">去「教材答疑」提问 ›</button></p>
+      <p class="privacy-note">教学演示用途。请勿输入患者资料、个人信息或校内未授权数据；回答不能替代临床判断。</p>
+
+      <h2 class="section-title">快速开始</h2>
+      <div class="quick">
+        <button class="quick-card" data-act="learn">
+          <span class="quick-icon blue"><svg><use href="#i-learn"></use></svg></span>
+          <strong>开始学习</strong>
+          <p>进入脑神经示例章节，按当前掌握情况安排学习</p>
+          <span class="quick-go"><svg><use href="#i-arrow"></use></svg></span>
+        </button>
+        <button class="quick-card" data-act="research">
+          <span class="quick-icon green"><svg><use href="#i-flask"></use></svg></span>
+          <strong>文献漫游</strong>
+          <p>从教材问题出发，检索 PubMed 文献</p>
+          <span class="quick-go green"><svg><use href="#i-arrow"></use></svg></span>
+        </button>
+        <button class="quick-card" data-act="ask">
+          <span class="quick-icon violet"><svg><use href="#i-spark"></use></svg></span>
+          <strong>教材答疑</strong>
+          <p>直接问教材，回答附书名、页码与原文片段</p>
+          <span class="quick-go violet"><svg><use href="#i-arrow"></use></svg></span>
+        </button>
+        <button class="quick-card" data-act="quiz">
+          <span class="quick-icon amber"><svg><use href="#i-clip"></use></svg></span>
+          <strong>学习评估</strong>
+          <p>按示例目标检查掌握情况，生成诊断与补学建议</p>
+          <span class="quick-go amber"><svg><use href="#i-arrow"></use></svg></span>
+        </button>
+      </div>
+
+      <div class="section-head">
+        <h2 class="section-title">最近学习</h2>
+        <button class="link" data-view="learn">查看全部 ›</button>
+      </div>
+      <div class="recent" id="recent"></div>
+    </section>
+
+    <section class="view" id="view-ask">
+      <h1 class="page-title">教材答疑</h1>
+      <p class="page-sub">提问先在本地教材索引里检索，只回答能翻到原文的部分；查不到就明确拒答。配置了内置模型时由模型组织语言，但不会补充教材以外的结论。</p>
       <form class="askbar" id="askForm" autocomplete="off">
         <div class="askbar-icon"><svg><use href="#i-spark"></use></svg></div>
-        <input id="q" type="text" maxlength="300" placeholder="你可以告诉我你正在学习的章节，或者直接开始学习...">
+        <input id="q" type="text" maxlength="300" placeholder="写下你想问的教材问题，例如“小胶质细胞的功能是什么”">
         <button class="send" type="submit" id="sendBtn" aria-label="提问"><svg><use href="#i-send"></use></svg></button>
       </form>
       <div class="chips" id="chips">
         <span class="chip-label">例如：</span>
         <button class="chip" type="button">小胶质细胞的功能</button>
         <button class="chip" type="button">帮我找相关的教材资料</button>
-        <button class="chip" type="button">我有个问题想问…</button>
+        <button class="chip" type="button">动眼神经损伤为什么上睑下垂</button>
       </div>
       <p class="privacy-note">教学演示用途。请勿输入患者资料、个人信息或校内未授权数据；回答不能替代临床判断。</p>
+
+      <div class="ask-guide">
+        <article class="panel">
+          <div class="panel-head"><span class="panel-icon blue"><svg><use href="#i-books"></use></svg></span><h3>能答什么<small>本地三本教材</small></h3></div>
+          <p class="study-source">只回答《局部解剖学（第10版）》《生理学（第10版）》《生物化学与分子生物学（第10版）》里能翻到原文的内容；三本书没讲的（例如角膜反射通路）会直接拒答，并建议去「文献漫游」查原始出处。</p>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><span class="panel-icon violet"><svg><use href="#i-spark"></use></svg></span><h3>怎么问<small>点一下直接填入</small></h3></div>
+          <div class="chips" id="askGuides">
+            <button class="chip" type="button">动眼神经损伤为什么上睑下垂</button>
+            <button class="chip" type="button">缺氧时 2,3-BPG 为什么升高</button>
+            <button class="chip" type="button">小胶质细胞有什么功能</button>
+            <button class="chip" type="button">海绵窦里有哪些结构</button>
+          </div>
+          <p class="study-source">问“机制、位置、功能、代谢途径”比问“怎么办”更容易命中原文；回答里会给出书名、印刷页码和原文片段，可以回书核对。</p>
+        </article>
+      </div>
 
       <div id="askContext" class="learning-context" hidden></div>
       <div id="result" class="result" hidden>
@@ -136,34 +195,6 @@
           <div id="localMaterialMatchesBody"></div>
         </article>
       </div>
-
-      <h2 class="section-title">快速开始</h2>
-      <div class="quick">
-        <button class="quick-card" data-act="learn">
-          <span class="quick-icon blue"><svg><use href="#i-learn"></use></svg></span>
-          <strong>开始学习</strong>
-          <p>进入脑神经示例章节，按当前掌握情况安排学习</p>
-          <span class="quick-go"><svg><use href="#i-arrow"></use></svg></span>
-        </button>
-        <button class="quick-card" data-act="research">
-          <span class="quick-icon green"><svg><use href="#i-flask"></use></svg></span>
-          <strong>文献漫游</strong>
-          <p>从教材问题出发，检索 PubMed 文献</p>
-          <span class="quick-go green"><svg><use href="#i-arrow"></use></svg></span>
-        </button>
-        <button class="quick-card" data-act="quiz">
-          <span class="quick-icon amber"><svg><use href="#i-clip"></use></svg></span>
-          <strong>学习评估</strong>
-          <p>按示例目标检查掌握情况，生成诊断与补学建议</p>
-          <span class="quick-go amber"><svg><use href="#i-arrow"></use></svg></span>
-        </button>
-      </div>
-
-      <div class="section-head">
-        <h2 class="section-title">最近学习</h2>
-        <button class="link" data-view="learn">查看全部 ›</button>
-      </div>
-      <div class="recent" id="recent"></div>
     </section>
 
     <section class="view" id="view-learn">
@@ -187,7 +218,12 @@
 
     <section class="view" id="view-quiz">
       <h1 class="page-title">学习评估</h1>
-      <p class="page-sub">按「三个要点」出题并逐点评分：答对一个要点不算掌握。数据来自《医枢》诊断引擎，全部保存在本机。</p>
+      <p class="page-sub">先选章节，再选知识点出题；按「三个要点」逐点评分，答对一个要点不算掌握。数据来自《医枢》诊断引擎，全部保存在本机。</p>
+      <article class="panel chapter-picker" id="quizChapterPanel">
+        <div class="panel-head"><span class="panel-icon blue"><svg><use href="#i-books"></use></svg></span><h3>第一步 · 选择章节<small id="quizChapterHint">还没有选章节</small></h3></div>
+        <div class="chips" id="quizUnits"></div>
+        <p class="study-source" id="quizUnitNote">章节来自本机课程单元划分；每个章节下的知识点才有测评题。</p>
+      </article>
       <div class="metric-row" id="quizMetrics"></div>
       <div class="two-col">
         <article class="panel">
@@ -195,12 +231,24 @@
           <div id="quizArea"></div>
         </article>
         <article class="panel">
-          <div class="panel-head"><span class="panel-icon green"><svg><use href="#i-books"></use></svg></span><h3>选择知识点</h3></div>
+          <div class="panel-head"><span class="panel-icon green"><svg><use href="#i-books"></use></svg></span><h3>第二步 · 选择知识点<small id="quizConceptHint">先选章节</small></h3></div>
           <div class="chips" id="quizConcepts"></div>
           <div class="panel-head" style="margin-top:18px"><span class="panel-icon amber"><svg><use href="#i-clock"></use></svg></span><h3>掌握概览</h3></div>
           <div id="quizReport" class="weak"></div>
         </article>
       </div>
+      <article class="panel quiz-ask" id="quizAskPanel">
+        <div class="panel-head"><span class="panel-icon violet"><svg><use href="#i-spark"></use></svg></span><h3>第三步（可选）· 把这道题问清楚<small>教材答疑</small></h3></div>
+        <p class="study-source">出题之后仍不确定时，可以就这道题直接问教材；回答会给出书名、印刷页码与原文片段，查不到就拒答。提问不会自动算进作答。</p>
+        <form class="askbar small" id="quizAskForm" autocomplete="off">
+          <div class="askbar-icon"><svg><use href="#i-spark"></use></svg></div>
+          <input id="quizAskInput" type="text" maxlength="300" placeholder="例如：动眼神经损伤为什么上睑下垂？">
+          <button class="send" type="submit" aria-label="问教材"><svg><use href="#i-send"></use></svg></button>
+        </form>
+        <div class="chips" id="quizAskChips"></div>
+        <div id="quizAskStatus" class="pm-status"></div>
+        <div id="quizAskResult" class="quiz-ask-result" hidden></div>
+      </article>
       <article class="panel learning-report" id="learningReport">
         <div class="panel-head"><span class="panel-icon blue"><svg><use href="#i-clock"></use></svg></span><h3>学习报告<small>要点评分与前后变化</small></h3></div>
         <div id="learningReportBody">正在读取学习记录…</div>
@@ -318,7 +366,36 @@
     </section>
     <section class="view" id="view-me">
       <h1 class="page-title">个人中心</h1>
-      <p class="page-sub">学习记录保存在运行服务的电脑上，当前浏览器用匿名标识区分记录。文献检索会发送查询式至 NCBI；启用可选模型后，相关问题与资料也会发往配置的模型服务。</p>
+      <p class="page-sub">学习数据来自本机记录的作答与页面停留时长：翻到本页不算学习，只有页面可见时的计时才计入。当前浏览器用匿名标识区分记录。</p>
+
+      <article class="profile-card" id="profileCard"></article>
+
+      <div class="me-stats" id="meStats"></div>
+
+      <div class="me-grid">
+        <article class="panel me-progress">
+          <div class="panel-head between">
+            <div class="head-left"><span class="panel-icon blue"><svg><use href="#i-clip"></use></svg></span><h3>章节进度<small>按测评过的知识点计算</small></h3></div>
+            <button class="link small" data-view="quiz">去测评 ›</button>
+          </div>
+          <div id="meProgressBody"></div>
+        </article>
+        <article class="panel me-week">
+          <div class="panel-head between">
+            <div class="head-left"><span class="panel-icon blue"><svg><use href="#i-clock"></use></svg></span><h3>近 7 天学习时长<small>单位：分钟</small></h3></div>
+            <span class="tag ghost" id="meWeekTotal">—</span>
+          </div>
+          <div id="meWeekChart" class="week-chart"></div>
+          <p class="study-source">只有页面处于前台时按 1 分钟心跳记录；切换标签页或最小化期间不计时。</p>
+        </article>
+      </div>
+
+      <article class="panel me-achievements">
+        <div class="panel-head"><span class="panel-icon amber"><svg><use href="#i-spark"></use></svg></span><h3>学习印记<small>按本机记录解锁</small></h3></div>
+        <div class="badge-grid" id="meAchievements"></div>
+      </article>
+
+      <h2 class="section-title">运行状态与数据</h2>
       <div class="panel status-panel" id="statusPanel"></div>
       <article class="panel learning-report">
         <div class="panel-head"><span class="panel-icon blue"><svg><use href="#i-clip"></use></svg></span><h3>我的数据<small>导出与清理</small></h3></div>

@@ -21,7 +21,7 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from knowledge import CONCEPTS, CONCEPT_MAP, QUESTION_MAP, SOURCES, COURSE
 import textbook
@@ -111,8 +111,9 @@ def reset_learning(db, learner, body):
     confirmation = "CLEAR_MY_DATA" if scope == "all" else "CLEAR_MY_LEARNING"
     if body.get("confirmation") != confirmation:
         raise InputError("清空需明确确认对应的数据范围")
-    deleted = {"attempts": 0, "events": 0, "learners": 0, "sources": 0, "tutor_conversations": 0, "text_attempts": 0}
-    for table in ("attempts", "events", "tutor_conversations", "text_attempts") + (("sources",) if scope == "all" else ()):
+    deleted = {"attempts": 0, "events": 0, "learners": 0, "sources": 0, "tutor_conversations": 0,
+               "text_attempts": 0, "study_time": 0}
+    for table in ("attempts", "events", "tutor_conversations", "text_attempts", "study_time") + (("sources",) if scope == "all" else ()):
         deleted[table] = db.execute(f"DELETE FROM {table} WHERE learner=?", (learner,)).rowcount
     deleted["learners"] = db.execute("DELETE FROM learners WHERE id=?", (learner,)).rowcount
     remaining = db.execute("SELECT COUNT(*) FROM sources WHERE learner=?", (learner,)).fetchone()[0]
@@ -176,6 +177,67 @@ def _weak(db, learner, limit=6):
     return out
 
 
+def _local_day(ts):
+    """上海时区的自然日字符串；学习时长按自然日归档。"""
+    return datetime.fromtimestamp(ts, SHANGHAI).strftime("%Y-%m-%d")
+
+
+def record_study_seconds(db, learner, seconds):
+    """累加当天学习时长。前端只在页面可见时按心跳上报，不推断、不补记。"""
+    if isinstance(seconds, bool) or not isinstance(seconds, (int, float)):
+        raise InputError("学习时长必须是数字")
+    seconds = float(seconds)
+    if not 1 <= seconds <= 600:
+        raise InputError("单次上报需在 1 至 600 秒之间")
+    day = _local_day(time.time())
+    db.execute(
+        "INSERT INTO study_time(learner,day,seconds) VALUES(?,?,?) "
+        "ON CONFLICT(learner,day) DO UPDATE SET seconds=study_time.seconds+excluded.seconds",
+        (learner, day, seconds))
+    return day
+
+
+def time_stats(db, learner, days=7):
+    """学习时长与连续天数：时长只来自前端心跳，事件只用于判断“这一天有没有学习”。"""
+    stored = {row["day"]: float(row["seconds"] or 0) for row in
+              db.execute("SELECT day,seconds FROM study_time WHERE learner=?", (learner,))}
+    today = datetime.now(SHANGHAI).date()
+    series = []
+    for back in range(days - 1, -1, -1):
+        day = (today - timedelta(days=back)).isoformat()
+        series.append({"date": day, "minutes": round(stored.get(day, 0) / 60, 1)})
+    active_days = set(stored)
+    active_days.update(_local_day(row[0]) for row in
+                       db.execute("SELECT created FROM events WHERE learner=?", (learner,)))
+    cursor = today if today.isoformat() in active_days else today - timedelta(days=1)
+    streak = 0
+    while cursor.isoformat() in active_days:
+        streak += 1
+        cursor -= timedelta(days=1)
+    return {"total_minutes": round(sum(stored.values()) / 60, 1),
+            "week_minutes": round(sum(item["minutes"] for item in series), 1),
+            "today_minutes": series[-1]["minutes"] if series else 0,
+            "series": series, "streak_days": streak, "active_days": len(active_days)}
+
+
+def unit_stats(items):
+    """按课程单元（章节）汇总：完成指本章知识点都做过测评，不等于全部掌握。"""
+    rows = {}
+    for item in items:
+        rows.setdefault(item.get("unit") or "未分章", []).append(item)
+    order = list(COURSE.get("units") or [])
+    names = [name for name in order if name in rows] + [name for name in rows if name not in order]
+    out = []
+    for name in names:
+        group = rows[name]
+        assessed = sum(1 for item in group if item["attempts"] > 0)
+        mastered = sum(1 for item in group if item["status"] == "已掌握")
+        out.append({"name": name, "total": len(group), "assessed": assessed, "mastered": mastered,
+                    "progress": round(assessed / len(group) * 100) if group else 0,
+                    "completed": bool(group) and assessed == len(group)})
+    return out
+
+
 def overview_payload(db, learner):
     snap = snapshot(db, learner)
     books = _book_stats(db, learner)
@@ -211,6 +273,8 @@ def overview_payload(db, learner):
         "concepts": snap["concepts"],
         "recommendation": snap["recommendation"],
         "stats": snap["stats"],
+        "units": unit_stats(snap["concepts"]),
+        "learning_time": time_stats(db, learner),
         "learning_plan": build_plan(snap['concepts'], attempts_get(db, learner), snap['active']),
         "image_quiz": image_stats(db, learner),
         "status": {"llm": bool(API_KEY), "model": MODEL if API_KEY else "本地规则引擎",
