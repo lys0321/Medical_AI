@@ -336,3 +336,112 @@ def coverage_of(items):
     if not items:
         return 0.0
     return max(float(i.get("coverage", 0)) for i in items)
+
+
+# ---------- 练习提示用：按知识点找“教材哪一页讲过” ----------
+
+_INDEX_LIKE = re.compile(r"[，,]\s*\d")
+_SPACE = re.compile(r"\s+")
+# PDF 抽取常见：汉字之间夹一个空格（"病 变"），汉字与标点之间的空格一并去掉
+_CJK_GAP = re.compile(
+    r"(?<=[\u4e00-\u9fff，。；：、？！“”‘’（）《》])\s+(?=[\u4e00-\u9fff，。；：、？！“”‘’（）《》])")
+# 汉字后面直接跟一长串英文，多半是双栏串行（也要排除正常的中英混排术语）
+_COLUMN_JUMP = re.compile(r"(?<=[\u4e00-\u9fff])\s+[a-zA-Z]{4,}")
+
+
+def _looks_like_index(text):
+    """书后索引页：『舌下神经 hypoglossal nerve 44，45 …』这类条目堆叠，不适合作学习出处。"""
+    return len(_INDEX_LIKE.findall(text)) >= 3
+
+
+def snippet(text, term, width=90):
+    """截取包含关键词的一段原句，用于回书核对。
+
+    教材 PDF 抽出来的句子常带断行空格（"病 变"），这里先去掉汉字之间的空格，
+    否则提示里读起来像错字。
+    """
+    clean = _CJK_GAP.sub("", _SPACE.sub(" ", str(text)).strip())
+    pos = clean.find(term) if term else -1
+    if pos < 0:
+        return clean[:width]
+    start = max(0, pos - width // 3)
+    end = min(len(clean), pos + len(term) + width)
+    body = clean[start:end].lstrip(" 。，、；：？！…")
+    if start:
+        body = "…" + body
+    # 双栏排版抽出来时常把下一栏的英文词接在汉字后面（"眼睑不 buccal branch"），
+    # 遇到这种跳字就截断，宁短一点也不要读不通的句子。
+    jump = _COLUMN_JUMP.search(body)
+    if jump:
+        return body[: jump.start()].rstrip() + "…"
+    return body + ("…" if end < len(clean) else "")
+
+
+def page_text(book, page):
+    """按书名 + 印刷页码取出该页全部原文，用于「回书核对」。
+
+    同一页可能被切成多段，这里按原顺序拼回去，段间用空格分隔。
+    """
+    idx = ensure()
+    parts = [s["text"] for s in idx["sources"] if s["book"] == book and s["page"] == page]
+    return " ".join(parts)
+
+
+def related(query, require=None, top_k=2, min_coverage=MIN_COVERAGE):
+    """按知识点检索教材页：放宽排序数量，但要求正文出现核心词、且不是索引页。
+
+    与 search() 的区别：search() 用于「回答问题」，宁缺毋滥；
+    related() 用于「回书核对」，可以给出相关度中等但确实讲到了本词的页。
+    """
+    idx = ensure()
+    if not idx["sources"]:
+        return []
+
+    terms = _query_terms(query)
+    if not terms:
+        return []
+
+    N = len(idx["sources"])
+    scores = defaultdict(float)
+    for t in terms:
+        post = idx["postings"].get(t)
+        if not post:
+            continue
+        idf = math.log(1 + (N - idx["df"][t] + 0.5) / (idx["df"][t] + 0.5))
+        for did, tf in post:
+            dl = idx["len"][did] or 1
+            denom = tf + 1.2 * (0.25 + 0.75 * dl / idx["avg"])
+            scores[did] += idf * (tf * 2.2) / denom
+
+    if not scores:
+        return []
+
+    total_w = 0.0
+    for t in terms:
+        df = idx["df"].get(t, 0)
+        total_w += math.log(1 + (N - df + 0.5) / (df + 0.5))
+
+    out, seen = [], set()
+    for did, _ in sorted(scores.items(), key=lambda x: -x[1])[:60]:
+        s = idx["sources"][did]
+        text = s["text"]
+        if require and require not in text:
+            continue
+        if _looks_like_index(text):
+            continue
+        key = (s["book"], s["page"])
+        if key in seen:
+            continue
+        got = 0.0
+        for t in terms:
+            if t in text:
+                df = idx["df"].get(t, 0)
+                got += math.log(1 + (N - df + 0.5) / (df + 0.5))
+        cov = got / total_w if total_w else 0.0
+        if cov < min_coverage:
+            continue
+        seen.add(key)
+        out.append({**s, "coverage": round(cov, 3)})
+        if len(out) >= top_k:
+            break
+    return out

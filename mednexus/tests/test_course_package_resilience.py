@@ -144,6 +144,7 @@ class StartupResilienceTests(unittest.TestCase):
             result = subprocess.run([sys.executable, '-c',
                                      'import server; print(len(server.CONCEPTS))'],
                                     cwd=str(HERE), env=env, capture_output=True, text=True,
+                                    encoding='utf-8', errors='replace',
                                     timeout=60)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), '9')
@@ -158,6 +159,7 @@ class StartupResilienceTests(unittest.TestCase):
             result = subprocess.run([sys.executable, '-c',
                                      'import server; print(len(server.CONCEPTS))'],
                                     cwd=str(HERE), env=env, capture_output=True, text=True,
+                                    encoding='utf-8', errors='replace',
                                     timeout=60)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), '0')

@@ -1133,7 +1133,14 @@ function renderQuiz(data) {
   }
 
   if (quizPhase === "empty") {
-    $("quizArea").textContent = "选择右侧任意知识点，开始三个要点的诊断。";
+    const area = $("quizArea");
+    area.innerHTML = "";
+    area.appendChild(el("p", null, "选择右侧任意知识点，开始三个要点的诊断。"));
+    const start = el("button", "btn btn-primary", "按推荐直接来一道题");
+    start.type = "button";
+    start.addEventListener("click", () => loadTask(nextConceptId(), "auto"));
+    area.appendChild(start);
+    area.appendChild(quizToolbar({ refresh: false }));
   }
 }
 
@@ -1157,6 +1164,37 @@ async function loadTask(cid, kind = "auto") {
     $("quizArea").appendChild(retry);
     return null;
   } finally { quizLoading = false; renderQuiz(overviewData); }
+}
+
+function nextConceptId() {
+  const list = (overviewData?.concepts || []).map((c) => c.id).filter(Boolean);
+  if (!list.length) return quizConcept;
+  const recommend = overviewData?.recommendation?.id;
+  if (recommend && recommend !== quizConcept) return recommend;
+  const i = list.indexOf(quizConcept);
+  return list[(i + 1) % list.length] || quizConcept;
+}
+
+/* 每次出题/看结果/补学都带同一组「换一题、换个知识点」按钮，
+   学生不会被卡在某一题或某段对话里出不来。 */
+function quizToolbar({ refresh = true, refreshLabel = "换一题" } = {}) {
+  const bar = el("div", "quiz-actions");
+  bar.style.cssText = "display:flex;gap:10px;flex-wrap:wrap;margin-top:14px";
+  if (refresh) {
+    const again = el("button", "btn", refreshLabel);
+    again.type = "button";
+    again.title = "放弃当前这道题，换同一知识点的另一道题（不计分）";
+    again.addEventListener("click", () => {
+      if (!quizConcept) { toast("先选一个知识点"); return; }
+      loadTask(quizConcept, "refresh");
+    });
+    bar.appendChild(again);
+  }
+  const jump = el("button", "btn", "换个知识点");
+  jump.type = "button";
+  jump.addEventListener("click", () => loadTask(nextConceptId(), "auto"));
+  bar.appendChild(jump);
+  return bar;
 }
 
 function renderTaskCard(t) {
@@ -1210,11 +1248,11 @@ function renderTaskCard(t) {
     wrap.appendChild(row);
     const hints = el('div', 'task-hints');
     const previousHints = p.hints || [];
-    previousHints.forEach((text, step) => hints.appendChild(el('p', 'study-source', '思路' + (step + 1) + '：' + text)));
-    const hintButton = el('button', 'btn task-hint-button', previousHints.length ? '再给一步提示' : '卡住了，给我一个思路');
+    previousHints.forEach((text, step) => hints.appendChild(el('p', 'study-source task-hint-item', '教材出处' + (step + 1) + '：' + text)));
+    const hintButton = el('button', 'btn task-hint-button', previousHints.length ? '再看另一处出处' : '这题在教材哪一页');
     hintButton.type = 'button';
     hintButton.dataset.level = previousHints.length;
-    if (previousHints.length >= 2) { hintButton.disabled = true; hintButton.textContent = '两步提示已显示'; }
+    if (previousHints.length >= 2) { hintButton.disabled = true; hintButton.textContent = '两处出处已显示'; }
     hintButton.addEventListener('click', () => requestTaskHint(t, i, hintButton, hints));
     wrap.append(hints, hintButton);
     form.appendChild(wrap);
@@ -1254,7 +1292,8 @@ function renderTaskCard(t) {
     finally { controls.forEach(control => { control.disabled = false; }); submit.textContent = '提交作答'; }
   });
   area.appendChild(submit);
-  area.appendChild(el('p', 'study-source', '可先独立作答；思路提示按步骤展开。使用提示的作答会标为辅助练习，不作为独立掌握证据。'));
+  area.appendChild(quizToolbar());
+  area.appendChild(el('p', 'study-source', '可先独立作答；卡住时点“这题在教材哪一页”，会给出书名、印刷页码和原文片段，方便回书核对。使用提示的作答会标为辅助练习，不作为独立掌握证据。'));
   const tutorBox = el('section'); area.appendChild(tutorBox);
   mountTutorChat(tutorBox, t.token);
 }
@@ -1264,17 +1303,17 @@ async function requestTaskHint(t, point, button, container) {
   const level = Number(button.dataset.level || 0) + 1;
   if (level > 2) return;
   quizHintLoading = true; button.disabled = true;
-  const oldLabel = button.textContent; button.textContent = '正在准备提示…';
+  const oldLabel = button.textContent; button.textContent = '正在检索教材…';
   try {
     const data = await api('/api/hint', {token:t.token, point, level});
     if (quizTask?.token !== t.token || quizPhase !== 'task') return;
-    container.appendChild(el('p', 'study-source', '思路' + data.level + '：' + data.text));
+    container.appendChild(el('p', 'study-source task-hint-item', '教材出处' + data.level + '：' + data.text));
     button.dataset.level = data.level;
-    button.textContent = data.level >= 2 ? '两步提示已显示' : '再给一步提示';
+    button.textContent = data.level >= 2 ? '两处出处已显示' : '再看另一处出处';
     button.disabled = data.level >= 2;
   } catch (error) {
     button.textContent = oldLabel; button.disabled = false;
-    toast('提示暂不可用：' + error.message + '，可继续作答或重试，结果页会说明是否使用过提示');
+    toast('教材出处暂不可用：' + error.message + '，可继续作答或重试，结果页会说明是否使用过提示');
   } finally { quizHintLoading = false; }
 }
 
@@ -1341,6 +1380,10 @@ function renderQuizResult(r) {
   toReport.style.marginLeft = "12px";
   toReport.addEventListener("click", () => $("learningReport").scrollIntoView({ behavior: "smooth" }));
   area.appendChild(toReport);
+
+  // 结果页必须能随时离开：不等推荐按钮，直接再来一道或换知识点。
+  area.appendChild(quizToolbar({ refresh: Boolean(r.concept), refreshLabel: "再来一题" }));
+
   if (r.tutor_token) {
     const tutorBox = el('section'); area.appendChild(tutorBox);
     mountTutorChat(tutorBox, r.tutor_token);
@@ -1447,6 +1490,7 @@ async function showStudyForResult(result) {
     const askMore = el("button", "btn", "围绕这个知识点查询教材");
     askMore.addEventListener("click", () => openConceptQuestion(data.concept, data.name));
     actions.append(retest, askMore); area.appendChild(actions);
+    area.appendChild(quizToolbar({ refresh: true, refreshLabel: "直接换一道题" }));
     mountResearchBridge(area, data.concept);
   } catch (e) {
     quizPhase = "result";

@@ -12,7 +12,10 @@ import tutor_model
 class TutorModelTests(unittest.TestCase):
     def setUp(self):
         tutor_model._cache = None
-        self.env = patch.dict(os.environ, {'MEDNEXUS_TUTOR_URL':'http://127.0.0.1:11434','MEDNEXUS_TUTOR_MODEL':''})
+        # 这组用例只验证本机 Ollama 传输；显式清空云端密钥，避免开发者本机
+        # 的 .env（内置 API）把状态切换到云端而让断言失真。
+        self.env = patch.dict(os.environ, {'MEDNEXUS_TUTOR_URL':'http://127.0.0.1:11434','MEDNEXUS_TUTOR_MODEL':'',
+                                           'MEDNEXUS_API_KEY':'','MEDNEXUS_BASE_URL':'','MEDNEXUS_MODEL':''})
         self.env.start()
 
     def tearDown(self):
@@ -48,6 +51,26 @@ class TutorModelTests(unittest.TestCase):
         self.assertIn('known passage',payload['messages'][0]['content'])
         self.assertFalse(payload['think'])
         self.assertEqual(calls[-1][0],'http://127.0.0.1:11434/api/chat')
+
+    def test_builtin_cloud_key_is_used_without_ollama(self):
+        """配了内置 API 就该在没装 Ollama 的电脑/手机后端上直接可用。"""
+        cloud = {'MEDNEXUS_API_KEY':'fixture-key','MEDNEXUS_BASE_URL':'https://open.bigmodel.cn/api/paas/v4',
+                 'MEDNEXUS_MODEL':'glm-4-flash'}
+        with patch.dict(os.environ, cloud), patch.object(tutor_model,'_json_request',side_effect=OSError) as local:
+            status = tutor_model.status()
+            self.assertTrue(status['available'])
+            self.assertEqual(status['mode'],'cloud')
+            self.assertIn('glm-4-flash',status['label'])
+            self.assertIn('glm-4-flash',status['note'])
+            generator = tutor_model.generator()
+            local.assert_not_called()
+        self.assertIsNotNone(generator)
+
+    def test_cloud_can_be_switched_off(self):
+        cloud = {'MEDNEXUS_API_KEY':'fixture-key','MEDNEXUS_BASE_URL':'https://open.bigmodel.cn/api/paas/v4',
+                 'MEDNEXUS_MODEL':'glm-4-flash','MEDNEXUS_CLOUD':'0'}
+        with patch.dict(os.environ, cloud), patch.object(tutor_model,'_json_request',side_effect=OSError):
+            self.assertFalse(tutor_model.status()['available'])
 
 
 if __name__ == '__main__':
