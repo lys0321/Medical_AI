@@ -295,6 +295,10 @@
     <section class="view" id="view-materials">
       <h1 class="page-title">课程资料与题库</h1>
       <p class="page-sub">用户提供的组胚复习资料与系统解剖学课程大纲，仅供本机学习。原图序号与文档段落号均不是教材页码；识别文字和资料答案尚待教师校对。</p>
+      <article class="panel" id="imageQuizPanel" hidden>
+        <div class="panel-head"><span class="panel-icon green"><svg><use href="#i-clip"></use></svg></span><h3>组胚识图练习<small>标注待教师审核</small></h3></div>
+        <div id="imageQuiz" aria-live="polite"></div>
+      </article>
       <article class="panel">
         <div class="quicknote-filters">
           <label>资料<select id="materialType"><option value="cards">组胚复习自测</option><option value="histology">组胚原图与知识检索</option><option value="syllabus">系统解剖学大纲</option></select></label>
@@ -367,5 +371,6 @@
 <script src="research-query.js"></script>
 <script src="app.js"></script>
 <script src="materials.js"></script>
+<script src="image-quiz.js"></script>
 </body>
 </html>

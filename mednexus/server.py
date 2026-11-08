@@ -34,6 +34,8 @@ from research_query import build_query_proposal
 import tutor_chat
 import tutor_model
 import text_grading
+import histology_quiz
+import vision
 
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("MEDNEXUS_DB", str(ROOT / "data" / "learning.sqlite3")))
@@ -705,6 +707,89 @@ def import_sources(db, learner, records):
     return {"count": len(cleaned), "message": "已导入本地资料。页码来自你的索引，系统不会将其标为已核验教材原页。"}
 
 
+def image_attempts(db, learner):
+    return [dict(r) for r in db.execute(
+        "SELECT id, token, score, created, payload FROM attempts WHERE learner=? AND kind='image' ORDER BY id",
+        (learner,))]
+
+
+def image_stats(db, learner):
+    """图片题单独统计，不进 progress()/掌握度。"""
+    return histology_quiz.summarize(image_attempts(db, learner))
+
+
+def image_quiz(db, learner, body):
+    """组胚识图：出题与作答。题目标注全部来自本机待审核标注文件。"""
+    action = body.get("action") or "next"
+    labels = histology_quiz.load_labels()
+    if not labels.get("available"):
+        return {"available": False, "reason": labels.get("reason", "no_labels"),
+                "message": labels.get("message", ""), "stats": image_stats(db, learner)}
+
+    if action == "next":
+        question = histology_quiz.build_question(labels)
+        if question is None:
+            return {"available": False, "reason": "not_enough_labels",
+                    "message": "标注不足以出题（至少需要 4 条不同的小标题）。",
+                    "stats": image_stats(db, learner)}
+        token = secrets.token_hex(16)
+        state = state_get(db, learner)
+        state["image"] = {"token": token, "question": question, "created": time.time()}
+        state_save(db, learner, state)
+        event(db, learner, "image-quiz", "histology", {"image_number": question["image_number"], "action": "task"})
+        return {"available": True, "question": histology_quiz.public(question, token),
+                "assist_available": bool(vision.configured_model()),
+                "stats": image_stats(db, learner)}
+
+    if action == "assist":
+        state = state_get(db, learner)
+        pending = state.get("image")
+        if not isinstance(pending, dict):
+            raise InputError("请先出一道识图题")
+        question = pending["question"]
+        path = materials.image_path(question.get("image", ""))
+        assist = vision.describe(path) if path else None
+        return {"available": assist is not None, "assist": assist,
+                "message": "" if assist else "本机没有配置视觉模型，或模型未返回可用描述。",
+                "notice": vision.NOTICE}
+
+    if action == "answer":
+        token, choice = body.get("token"), body.get("choice")
+        existing = db.execute("SELECT payload FROM attempts WHERE learner=? AND token=?",
+                              (learner, token)).fetchone()
+        if existing:
+            stored = json.loads(existing[0])
+            return {"result": stored, "correct": stored.get("correct"), "answer": stored.get("answer"),
+                    "stats": image_stats(db, learner)}
+        state = state_get(db, learner)
+        pending = state.get("image")
+        if not isinstance(pending, dict) or pending.get("token") != token:
+            raise InputError("这道识图题已切换，请刷新后重试")
+        question = pending["question"]
+        try:
+            outcome = histology_quiz.grade(question, choice)
+        except ValueError as error:
+            raise InputError(str(error))
+        payload = {"kind": "image", "image_number": question["image_number"],
+                   "question": "image-%d" % question["image_number"],
+                   "prompt": question["prompt"], "answer": outcome["answer"], "choice": outcome["choice"],
+                   "correct": outcome["correct"], "tissue": question.get("tissue", ""),
+                   "stains": question.get("stains", []),
+                   "review_status": question.get("review_status") or "pending"}
+        db.execute("INSERT INTO attempts(learner,token,concept,question,kind,score,payload,created) "
+                   "VALUES(?,?,?,?,?,?,?,?)",
+                   (learner, token, "histology", payload["question"], "image",
+                    1.0 if outcome["correct"] else 0.0, json.dumps(payload, ensure_ascii=False), time.time()))
+        state["image"] = None
+        state_save(db, learner, state)
+        event(db, learner, "image-quiz", "histology",
+              {"image_number": question["image_number"], "correct": outcome["correct"]})
+        return {"result": payload, "correct": outcome["correct"], "answer": outcome["answer"],
+                "stats": image_stats(db, learner)}
+
+    raise InputError("未知的识图操作")
+
+
 def snapshot(db, learner):
     items = progress(db, learner)
     state = state_get(db, learner)
@@ -721,13 +806,19 @@ def report(db, learner):
     rows = attempts_get(db, learner)
     errors = collections.Counter()
     for a in rows:
-        for p in json.loads(a["payload"])["rubric"]:
-            if not p["correct"]:
-                errors[p["category"]] += 1
+        # 识图题没有三要点 rubric，不能把它的 payload 当成文本题解析。
+        try:
+            payload = json.loads(a["payload"])
+        except (TypeError, ValueError):
+            continue
+        for p in payload.get("rubric", []) if isinstance(payload, dict) else []:
+            if isinstance(p, dict) and p.get("correct") is False:
+                errors[p.get("category", "未分类")] += 1
+    text_rows = [a for a in rows if a["kind"] != "image"]
     events = [dict(r) for r in db.execute("SELECT kind,concept,payload,created FROM events WHERE learner=? ORDER BY id DESC LIMIT 50", (learner,))]
-    return {**snap, "errors": dict(errors), "history": [{"id": a["id"], "concept": a["concept"], "kind": a["kind"], "score": round(a["score"] * 100), "created": a["created"], "result": json.loads(a["payload"])} for a in rows], "events": events,
-            "evidence_report": build_report_evidence(rows, QUESTION_MAP),
-            "method": "要点等权计分；EMA=0.4×旧值+0.6×本次得分（首次为本次值）。掌握需两个不同题目独立达标、包含迁移题、最近两次均独立≥80%且EMA≥80%。提示作答属于辅助练习，看过不算掌握；此规则是原型设计，未作学习效果验证。"}
+    return {**snap, "errors": dict(errors), "history": [{"id": a["id"], "concept": a["concept"], "kind": a["kind"], "score": round(a["score"] * 100), "created": a["created"], "result": json.loads(a["payload"])} for a in text_rows], "events": events,
+            "evidence_report": build_report_evidence(text_rows, QUESTION_MAP),
+            "method": "要点等权计分；EMA=0.4×旧值+0.6×本次得分（首次为本次值）。掌握需两个不同题目独立达标、包含迁移题、最近两次均独立≥80%且EMA≥80%。提示作答属于辅助练习，看过不算掌握；组胚识图题单独统计，不计入这里。此规则是原型设计，未作学习效果验证。"}
 
 
 def export_learning(db, learner):
@@ -868,6 +959,7 @@ def overview_payload(db, learner):
         "recommendation": snap["recommendation"],
         "stats": snap["stats"],
         "learning_plan": build_plan(snap['concepts'], attempts_get(db, learner), snap['active']),
+        "image_quiz": image_stats(db, learner),
         "status": {"llm": bool(API_KEY), "model": MODEL if API_KEY else "本地规则引擎",
                    "pubmed": True, "coverage_threshold": textbook.MIN_COVERAGE,
                    "textbook": textbook.status()["loaded"]},
@@ -1172,6 +1264,9 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(materials.save_review(body))
                 except materials.ReviewConflict as error:
                     return self.send({"error": str(error)}, 409)
+            if path == "/api/image-quiz":
+                with LOCK, connect() as db:
+                    return self.send(image_quiz(db, learner, body))
             if path == "/api/pubmed":
                 _t0 = time.time()
                 research = research_request(body)
