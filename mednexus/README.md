@@ -33,6 +33,32 @@ python server.py --open
 
 移到其他电脑后，先安装 Python，再双击启动脚本。脚本按自身位置寻找文件，不依赖原电脑的中文绝对路径。端口占用时可运行 `python server.py 7861 --open`。请通过服务地址访问，不要直接双击 `web/index.html`。
 
+## 课程包：课程内容不在代码里
+
+课程数据在 `data/courses/anatomy.json`，顶层字段为 `course` / `chapters` / `sources` / `concepts` / `questions` / `hints` / `query`。`course_loader.py` 在启动时校验，`knowledge.py` 只是加载层，改一道题不需要动 Python。
+
+校验内容：题号与知识点 id 唯一、每个知识点同时有诊断题和迁移题、每道题恰好三个要点且选项互不重复且包含正确答案、`course.goal_source` 必须写明、`syllabus_refs` 必须是字符串数组。
+
+**加载分两种模式**：
+
+| 模式 | 谁在用 | 遇到问题会怎样 |
+|---|---|---|
+| 非严格（默认启动） | `python server.py` | 坏掉的知识点或题目**单独丢弃**，原因打印成 `[course-package] 错误：…`，其余内容照常服务，页面仍能打开 |
+| 严格 | `python course_loader.py` | 汇总全部问题后抛错并返回非零，适合提交前自查 |
+
+所以改坏一道题不会让整个网页打不开；但控制台会出现 `[course-package]` 开头的行，不要忽略它。
+
+换一门课或做多个课程包，不用改代码：
+
+```powershell
+set MEDNEXUS_COURSE_PACKAGE=D:\path\to\another-course.json
+python server.py --open
+```
+
+### 大纲映射（`syllabus_refs`）
+
+`syllabus_refs` 只写大纲条目 id（如 `syllabus-290`），**不复制原文**。本机存在 `data/course_materials/syllabus.json` 时，前端才会把它解析成“章节·要求原文”显示在知识点面板；没有这份私有资料时该行不显示。空映射和查不到的条目只会告警、不阻断加载，**不会替人猜测填充**。新增映射的做法是照着本机大纲里的 id 填进去，再跑一次 `python course_loader.py` 看有没有提示。
+
 ## 已实现的使用流程
 
 1. 总览展示真实的学习记录，推荐最需要巩固或尚未测评的知识点。初始数据全为零，不使用设计图里的虚构成绩。

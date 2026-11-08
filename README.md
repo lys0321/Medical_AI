@@ -58,11 +58,15 @@ node online-demo/tests/engine.test.mjs
 
 ```text
 mednexus/          Python本地服务、医学学习示例、网页与回归测试（合并版）
+  data/courses/    课程包：anatomy.json 定义知识点、题库、提示模板与大纲映射
+  course_loader.py 课程包加载与校验（严格模式供提交前自查）
 online-demo/       独立浏览器演示、静态课程数据与引擎测试
 docs/             演示链接与测试说明
 开始使用医枢.bat    Windows相对路径启动脚本
 LICENSE           原仓库MIT许可证
 ```
+
+课程内容已从 Python 代码中抽离到 `mednexus/data/courses/anatomy.json`。启动时用非严格模式加载：某个知识点或题目写坏只会被单独跳过并在控制台报出原因，不会让整个网页打不开；`python mednexus/course_loader.py` 是严格自查入口。详见 [mednexus/README.md](mednexus/README.md) 的「课程包」一节。
 
 原始Word需求文件、用户截图、教材原文、本机学习数据库、模型密钥、部署账户配置和临时发布压缩包均未入库。
 
