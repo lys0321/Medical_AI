@@ -77,19 +77,41 @@ class PlanningTests(unittest.TestCase):
         self.assertEqual(due['items'][0]['due_at'],at(29,9))
 
     def test_cross_day_success_advances_interval_and_assistance_does_not(self):
-        rows = [attempt(when=at(25)),attempt(when=at(25),kind='transfer'),
-                attempt(when=at(26),kind='transfer')]
-        plan = build_plan(concepts(),rows,now=at(27))
-        self.assertEqual(plan['next_due_at'],at(29))
-        rows.append(attempt(when=at(27),kind='transfer',assisted=True))
-        self.assertEqual(build_plan(concepts(),rows,now=at(27,13))['next_due_at'],at(29))
+        first_day = [attempt(when=at(25)), attempt(when=at(25), kind='transfer')]
+        with_second = first_day + [attempt(when=at(26), kind='transfer')]
+        late = at(29, 13) + 60 * DAY          # 早已到期，条目才会出现在计划里
+        one = build_plan(concepts(), first_day, now=late)['items'][0]
+        two = build_plan(concepts(), with_second, now=late)['items'][0]
+        # 第二次独立迁移成功让间隔变长：不再是固定的 1/3/7/14 表。
+        self.assertGreater(two['interval_days'], one['interval_days'])
+        self.assertGreater(two['stability_days'], one['stability_days'])
+        rows = with_second + [attempt(when=at(27), kind='transfer', assisted=True)]
+        self.assertEqual(build_plan(concepts(), rows, now=at(27, 13))['next_due_at'],
+                         two['due_at'])
 
-    def test_failure_resets_successful_day_sequence(self):
-        rows = [attempt(when=at(23)),attempt(when=at(23),kind='transfer'),
-                attempt(when=at(24),kind='transfer'),attempt(when=at(25),kind='transfer',score=0),
-                attempt(when=at(26)),attempt(when=at(26),kind='transfer')]
-        plan = build_plan(concepts(),rows,now=at(26,13))
-        self.assertEqual(plan['next_due_at'],at(27))
+    def test_a_failure_pulls_review_back_within_one_day_and_recovery_is_shorter(self):
+        good = [attempt(when=at(23)), attempt(when=at(23), kind='transfer'),
+                attempt(when=at(24), kind='transfer')]
+        failed = good + [attempt(when=at(25), kind='transfer', score=0)]
+        right_after = build_plan(concepts(), failed, now=at(25, 13))['items'][0]
+        self.assertEqual(right_after['action'], 'review')
+        self.assertLessEqual(right_after['due_at'], at(25) + DAY)
+        late = at(29, 13) + 60 * DAY
+        before = build_plan(concepts(), good, now=late)['items'][0]
+        recovered = build_plan(concepts(), failed + [attempt(when=at(26)),
+                                                    attempt(when=at(26), kind='transfer')],
+                               now=late)['items'][0]
+        self.assertLess(recovered['stability_days'], before['stability_days'])
+
+    def test_consecutive_independent_success_keeps_making_intervals_longer(self):
+        rows, intervals = [], []
+        for day in (20, 21, 22, 23):
+            rows += [attempt(when=at(day)), attempt(when=at(day), kind='transfer')]
+            plan = build_plan(concepts(), rows, now=at(day, 13) + 60 * DAY)
+            intervals.append(plan['items'][0]['interval_days'])
+        for earlier, later in zip(intervals, intervals[1:]):
+            self.assertLess(earlier, later)
+        self.assertEqual(intervals, sorted(intervals))
 
     def test_active_task_is_first_deduplicated_and_reserves_new_budget(self):
         plan = build_plan(concepts(),[],active={'concept':'c7','kind':'diagnostic'},now=at(29))
@@ -128,6 +150,42 @@ class PlanningTests(unittest.TestCase):
         self.assertEqual((source_concepts,rows),original)
         self.assertEqual(result['counts']['new'],10)
         self.assertEqual(result['counts']['due'],0)
+
+    def test_backwards_clock_and_future_attempts_do_not_crash(self):
+        rows = [attempt(when=at(29)), attempt(when=at(29), kind='transfer')]
+        # now 早于作答时间：未来记录不计入，也不能抛异常。
+        earlier = build_plan(concepts(), rows, now=at(28))
+        self.assertEqual(earlier['counts']['due'], 0)
+        self.assertEqual(earlier['counts']['new'], 10)
+        # now 远早于所有记录（时钟回拨）。
+        backwards = build_plan(concepts(), rows, now=at(20, 3))
+        self.assertEqual(backwards['counts']['due'], 0)
+        # 记录时间早于 now 但顺序混乱时，重放仍按时间排序。
+        shuffled = [rows[1], rows[0]]
+        self.assertEqual(build_plan(concepts(), shuffled, now=at(29, 13))['next_due_at'],
+                         build_plan(concepts(), rows, now=at(29, 13))['next_due_at'])
+
+    def test_daily_new_limit_and_plan_limit_are_configurable(self):
+        plan = build_plan(concepts(), [], now=at(29), daily_new_limit=1, plan_limit=2)
+        self.assertEqual([item['concept'] for item in plan['items']], ['c0'])
+        self.assertEqual(plan['srs']['daily_new_limit'], 1)
+        plan = build_plan(concepts(), [], now=at(29), plan_limit=7)
+        self.assertEqual(len(plan['items']), 2)          # 受每日新知识点上限约束
+        weak = [attempt(cid=f'c{index}', score=0) for index in range(8)]
+        capped = build_plan(concepts(), weak, now=at(29), plan_limit=2)
+        self.assertEqual(len(capped['items']), 2)
+        self.assertEqual(capped['counts']['due'], 8)
+        self.assertEqual(capped['srs']['plan_limit'], 2)
+
+    def test_target_retention_is_configurable(self):
+        rows = [attempt(when=at(28)), attempt(when=at(28), kind='transfer')]
+        now = at(28, 13) + 60 * DAY
+        low = build_plan(concepts(), rows, now=now, target_retention=0.8)['items'][0]
+        high = build_plan(concepts(), rows, now=now, target_retention=0.95)['items'][0]
+        # 目标保持率越低，允许拖得越久。
+        self.assertGreater(low['interval_days'], high['interval_days'])
+        with self.assertRaises(ValueError):
+            build_plan(concepts(), rows, now=now, target_retention=1.2)
 
 
 if __name__ == '__main__':
