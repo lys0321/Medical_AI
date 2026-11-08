@@ -33,6 +33,32 @@ python server.py --open
 
 移到其他电脑后，先安装 Python，再双击启动脚本。脚本按自身位置寻找文件，不依赖原电脑的中文绝对路径。端口占用时可运行 `python server.py 7861 --open`。请通过服务地址访问，不要直接双击 `web/index.html`。
 
+## 课程包：课程内容不在代码里
+
+课程数据在 `data/courses/anatomy.json`，顶层字段为 `course` / `chapters` / `sources` / `concepts` / `questions` / `hints` / `query`。`course_loader.py` 在启动时校验，`knowledge.py` 只是加载层，改一道题不需要动 Python。
+
+校验内容：题号与知识点 id 唯一、每个知识点同时有诊断题和迁移题、每道题恰好三个要点且选项互不重复且包含正确答案、`course.goal_source` 必须写明、`syllabus_refs` 必须是字符串数组。
+
+**加载分两种模式**：
+
+| 模式 | 谁在用 | 遇到问题会怎样 |
+|---|---|---|
+| 非严格（默认启动） | `python server.py` | 坏掉的知识点或题目**单独丢弃**，原因打印成 `[course-package] 错误：…`，其余内容照常服务，页面仍能打开 |
+| 严格 | `python course_loader.py` | 汇总全部问题后抛错并返回非零，适合提交前自查 |
+
+所以改坏一道题不会让整个网页打不开；但控制台会出现 `[course-package]` 开头的行，不要忽略它。
+
+换一门课或做多个课程包，不用改代码：
+
+```powershell
+set MEDNEXUS_COURSE_PACKAGE=D:\path\to\another-course.json
+python server.py --open
+```
+
+### 大纲映射（`syllabus_refs`）
+
+`syllabus_refs` 只写大纲条目 id（如 `syllabus-290`），**不复制原文**。本机存在 `data/course_materials/syllabus.json` 时，前端才会把它解析成“章节·要求原文”显示在知识点面板；没有这份私有资料时该行不显示。空映射和查不到的条目只会告警、不阻断加载，**不会替人猜测填充**。新增映射的做法是照着本机大纲里的 id 填进去，再跑一次 `python course_loader.py` 看有没有提示。
+
 ## 已实现的使用流程
 
 1. 总览展示真实的学习记录，推荐最需要巩固或尚未测评的知识点。初始数据全为零，不使用设计图里的虚构成绩。
@@ -103,6 +129,18 @@ python server.py --open
 每段最多300字、整张卡最多1500字、最多12段，并提示段落截断和省略情况。原文节选不是中文翻译或全文解读，也不等于研究质量评价。无摘要时引导核对PubMed原始记录；查询修改或新疑问会使旧阅读内容失效，读取失败可重试同篇摘要。独立主题不会被自动绑定脑神经知识点或制造迁移题。
 
 分类依据：[NLM AbstractText XML规范](https://dtd.nlm.nih.gov/ncbi/pubmed/doc/out/250101/el-AbstractText.html)。原始标签的存在不证明研究质量，未结构化摘要中的结果仍需使用者打开原文人工核对。阅读操作不计分、不增加掌握记录；本轮未新增付费模型依赖。
+
+## 开放获取全文、证据字段与引文导出（2026-11-08）
+
+阅读卡新增一层可选的开放获取全文。点“加载开放获取全文”后，服务端按 PMID 做 PMC 编号转换，再取 JATS XML，只保留方法、结果、讨论三类段落，按全文顺序编号，每段带 `[PMID:段落号]`。段落编号只表示位置，不表示重要性；正文原样截取，不翻译、不改写、不生成结论。
+
+**许可闸门**：只有 CC0、CC BY、CC BY-SA、CC BY-NC、CC BY-NC-SA 这类允许摘录与再分发的许可才展示正文。ND 变体、All rights reserved 或许可不明时，**一个字都不返回**，只说明许可与原因并降级为摘要。全文与许可决定缓存在本地 `fulltext` 表，成功的缓存 7 天、被拒绝的缓存 1 天，避免反复请求 NCBI。
+
+**四种降级**：没有 PMCID、PMC 没有正文、许可不允许、网络失败，都会返回明确原因并只展示摘要；界面不会把摘要讲成“已读全文”。
+
+**证据字段提示**（不是质量评级）：只从 PubMed 文献类型与摘要原文抽取研究类型、样本量、随机化、盲法四项。摘要没写就显示“摘要未报告”，不推断；给的是核对提示（例如“未提到盲法时主观结局的效应估计可能偏高”），并明确写“不能凭文献类型判定质量”。
+
+**引文导出**：`/api/export-citations` 按检索缓存输出 BibTeX 或 RIS。缺卷期页码就不写，不补造；不在缓存里的 PMID 直接拒绝。界面提供“复制 BibTeX / 复制 RIS”。
 
 ## 内容和能力边界
 
@@ -191,6 +229,26 @@ python server.py --open
 
 只存元数据时可以给出书名、章节与页码定位，但不能校验教材原文或基于原文作答。要做原文检索需自愿提供授权文本；这些内容保存在本机，导出团队包时不包含数据库。导入页码一律标注“待人工核验”，索引一致性校验不会冒充对正版原书的核验。
 
+## 组胚识图练习（2026-11-08）
+
+55 张组胚原图现在可以出识图题。标注由脚本从本机 OCR 抽取，生成 `data/course_materials/histology_labels.json`（**不入库**，随资料一起留在本机）：
+
+```powershell
+python tools/build_histology_labels.py
+```
+
+每页记四类字段：`tissue`（组织，按关键词表计数）、`stains`（染色法）、`structures`（原文自己编号的小标题）、`source_page`（来源页）。全部带 `review_status: pending`。
+
+**题目形式**：给出一页图，问它的小标题是下面哪一项（4 选 1）。正确答案就是 OCR 从那张图上抽到的小标题，可以人工核对。
+
+> 为什么不是"在图上点出结构"：这 55 张图是**复习笔记扫描页**，OCR 框是文字行的框，不是切片里的解剖结构位置。凭空画结构框等于编造医学标注，所以本版只做能核实的事。如果以后换成真实切片照片并给出结构坐标，接口层已经支持按坐标判分的扩展点。
+
+**与文本题隔离**：答题写入同一条 `attempts` 记录，但 `kind='image'`、`concept='histology'`。`progress()` 只遍历课程知识点，所以图片题不进 EMA、不进掌握度；学习报告与导出也会跳过它们。`/api/overview` 里的 `image_quiz` 是独立的计数与正确率。
+
+**视觉模型（可选，默认关闭）**：设置 `MEDNEXUS_VISION_MODEL`（本机 Ollama 已安装的视觉模型名）后，界面多一个"让本机视觉模型描述这页（仅辅助）"按钮。描述一律标"未核验，不能作为答案依据"，不参与判分、不进选项。没配置时就是纯标签检索。
+
+界面在"课程资料与题库"页顶部，横幅写明**标注待教师审核**。
+
 ## 目录
 
 ```text
@@ -199,6 +257,12 @@ mednexus/
   knowledge.py           课程包加载层：知识点、学习卡、标准要点与20道题
   course_loader.py       课程包 data/courses/anatomy.json 的读取与校验
   srs.py                 FSRS-lite 间隔重复模型（纯函数，可单测）
+  pmc.py                 PMC 开放获取全文：ID 转换、许可闸门、JATS 段落解析
+  evidence.py            研究类型/样本量/随机化/盲法四项字段提示（不是质量评级）
+  citations.py           BibTeX 与 RIS 引文导出
+  histology_quiz.py      组胚识图题：标注加载、出题、判分、独立统计
+  vision.py              可选视觉模型描述辅助（默认关闭，未核验）
+  web/image-quiz.js      识图练习的界面渲染（标注待教师审核横幅）
   planning.py            从真实作答生成主动学习与间隔复习计划
   tutoring.py            按需展开的两步思考框架，不含评分答案
   web/                   无构建依赖的 HTML、CSS、JavaScript 与 SVG

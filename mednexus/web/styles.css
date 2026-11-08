@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    书页 · 医学生 AI 学习助手
    浅蓝白配色，左侧导航 + 中间内容 + 右侧计划栏
    ============================================================ */
@@ -155,6 +155,11 @@ svg { width: 1.2em; height: 1.2em; fill: none; stroke: currentColor; stroke-widt
 .learning-plan-detail { margin: 7px 0 0; font-size: 11px; }
 .learning-plan-task { flex: none; white-space: nowrap; }
 .learning-plan-task:disabled { opacity: .55; cursor: progress; }
+
+/* 组胚识图练习：题图按容器宽度缩放，小屏不横向溢出 */
+.image-quiz-image { display: block; max-width: 100%; height: auto; margin: 10px 0;
+  border: 1px solid var(--line, #dbe6f0); border-radius: 12px; background: #fff; }
+.image-quiz-body .chips { flex-wrap: wrap; }
 .learning-plan-method { margin-top: 12px; font-size: 12px; color: var(--muted); }
 .learning-plan-method summary { cursor: pointer; }
 .learning-plan-method .study-source { margin-bottom: 0; }
