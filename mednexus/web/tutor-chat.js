@@ -73,6 +73,14 @@ function renderTutorChat(entry) {
     (Array.isArray(record.sources) ? record.sources : []).forEach(source => bubble.appendChild(tutorSafeSource(source)));
     messages.appendChild(bubble);
   });
+  // 流式回复：服务端校验通过的正文分段到达，这里先显示已收到的部分。
+  if (entry.pending && typeof entry.streamText === "string" && entry.streamText) {
+    const live = el("article", "tutor-message tutor-assistant tutor-streaming");
+    live.append(el("strong", "tutor-speaker", "学习助手"),
+      el("p", "tutor-content", entry.streamText));
+    live.appendChild(el("small", "tutor-turn-mode", "正在接收…（引用已校验，完成后显示来源）"));
+    messages.appendChild(live);
+  }
   root.appendChild(messages);
 
   const status = el("p", "tutor-chat-status" + (entry.error ? " tutor-warning" : ""),
@@ -144,6 +152,43 @@ async function loadTutorChat(entry) {
   }
 }
 
+async function streamTutorReply(token, message, requestId, onChunk) {
+  const response = await fetch("/api/tutor/stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Learner-ID": learnerId() },
+    body: JSON.stringify({ token, message, request_id: requestId })
+  });
+  if (!response.ok || !response.body || typeof response.body.getReader !== "function") {
+    throw new Error("当前环境不支持流式返回");
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "", final = null, failure = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let cut;
+    while ((cut = buffer.indexOf("\n\n")) >= 0) {
+      const frame = buffer.slice(0, cut);
+      buffer = buffer.slice(cut + 2);
+      const lines = frame.split("\n");
+      const nameLine = lines.find(line => line.startsWith("event: "));
+      const dataLine = lines.filter(line => line.startsWith("data: "))
+        .map(line => line.slice(6)).join("\n");
+      let payload = {};
+      try { payload = JSON.parse(dataLine); } catch (_) { payload = {}; }
+      const name = nameLine ? nameLine.slice(7).trim() : "message";
+      if (name === "chunk" && typeof payload.text === "string") onChunk(payload.text);
+      else if (name === "done") final = payload;
+      else if (name === "error") failure = payload.error || "流式返回失败";
+    }
+  }
+  if (failure) throw new Error(failure);
+  if (!final) throw new Error("流式返回不完整");
+  return final;
+}
+
 async function sendTutorMessage(entry) {
   if (entry.pending || entry.loading || entry.loadError || !entry.snapshot || entry.snapshot.remaining <= 0 ||
       tutorChatEntries.get(entry.token) !== entry) return;
@@ -156,7 +201,24 @@ async function sendTutorMessage(entry) {
   entry.pending = true; entry.error = "";
   renderTutorChat(entry);
   try {
-    const snapshot = await api("/api/tutor", {token:entry.token, message, request_id:request.id});
+    let snapshot = null;
+    entry.streamText = "";
+    // 支持流式就先用流式；环境不支持（或客户端的旧浏览器）时同步走原来的接口，
+    // 保证“点了就发出去”的时序与拆分前一致。
+    if (typeof fetch === "function" && typeof learnerId === "function") {
+      try {
+        snapshot = await streamTutorReply(entry.token, message, request.id, text => {
+          entry.streamText = (entry.streamText || "") + text;
+          renderTutorChat(entry);
+        });
+      } catch (streamError) {
+        // 已经显示过片段就不要再重发，避免重复计数；否则回退到普通请求。
+        if (entry.streamText) throw streamError;
+      }
+    }
+    if (!snapshot) {
+      snapshot = await api("/api/tutor", {token:entry.token, message, request_id:request.id});
+    }
     if (tutorChatEntries.get(entry.token) !== entry) return;
     tutorSnapshot(entry, snapshot);
     if (entry.draft.trim() === message) entry.draft = "";
@@ -164,6 +226,7 @@ async function sendTutorMessage(entry) {
   } catch (error) {
     entry.error = "发送暂未完成：" + error.message + "。草稿已保留，可重试。";
   } finally {
+    entry.streamText = "";
     entry.pending = false; renderTutorChat(entry);
   }
 }
