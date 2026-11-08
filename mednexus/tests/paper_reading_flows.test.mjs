@@ -79,3 +79,78 @@ test('editing a query hides stale papers and invalidates in-flight reading and s
   pending.resolve(response());await readingCall;assert.ok(!text(s.nodes.paperReadingBody).includes('Synthetic paper'));
   assert.equal(s.calls.length,1);assert.match(s.nodes.pmStatus.textContent,/检索式已修改/);
 });
+
+/* ---------- 开放获取全文 / 证据字段 / 引文导出 ---------- */
+
+const fulltextResponse=()=>{
+  const data=response();
+  data.fulltext={available:true,license:'CC BY',pmcid:'PMC123',
+    notice:'原文段落，未翻译或改写。',sections:[{id:'results',title:'研究结果',paragraphs:[
+      {number:1,text:'We enrolled 120 patients.',citation:'[PMID:1]',truncated:false},
+      {number:2,text:'Response was higher.',citation:'[PMID:2]',truncated:true}]}]};
+  return data;
+};
+
+test('open access full text renders as its own layer with per-paragraph citations',()=>{
+  const s=setup(),root=new Node();s.ctx.mountPaperReading(root,fulltextResponse());
+  const rendered=text(root);
+  assert.match(rendered,/开放获取全文/);assert.match(rendered,/许可：CC BY/);
+  assert.match(rendered,/We enrolled 120 patients/);assert.match(rendered,/\[PMID:1\]/);
+  assert.match(rendered,/\[PMID:2\]/);assert.match(rendered,/本段仅显示开头/);
+});
+
+test('full text is opt-in and loads on demand with the original question and concept',async()=>{
+  let asked=null;
+  const data=response();data.concept='light';
+  data.fulltext={available:false,reason:'not_requested',message:'未请求全文；可以展开开放获取全文。',sections:[]};
+  const s=setup(async(path,body)=>{asked={path,body};return fulltextResponse();});
+  const root=new Node();s.ctx.mountPaperReading(root,data);
+  const load=button(root,'加载开放获取全文');assert.ok(load);
+  await load.listeners.click();
+  assert.equal(asked.path,'/api/read-paper');
+  assert.equal(asked.body.include_fulltext,true);
+  assert.equal(asked.body.question,'original question');
+  assert.equal(asked.body.concept,'light');
+  assert.match(text(root),/We enrolled 120 patients/);
+});
+
+test('denied licence shows the reason and never renders full text paragraphs',()=>{
+  const data=response();
+  data.fulltext={available:false,reason:'license_denied',license:'CC BY-ND',
+    message:'该文献的许可不允许摘录正文，只能阅读摘要。',sections:[]};
+  const s=setup(),root=new Node();s.ctx.mountPaperReading(root,data);
+  const rendered=text(root);
+  assert.match(rendered,/不允许摘录正文/);assert.match(rendered,/CC BY-ND/);
+  assert.ok(!rendered.includes('We enrolled 120 patients'));
+  assert.equal(button(root,'加载开放获取全文'),undefined);
+});
+
+test('evidence fields render as checkable hints instead of a quality verdict',()=>{
+  const data=response();
+  data.evidence_grade={fields:{
+      study_type:{status:'reported',value:'随机对照试验',source:'PubMed 文献类型'},
+      sample_size:{status:'reported',value:120,source:'摘要原文'},
+      randomization:{status:'reported',value:'摘要提到随机化'},
+      blinding:{status:'not_reported',value:'',source:'摘要原文'}},
+    hints:['摘要未提到盲法：开放标签研究里，主观结局的效应估计更容易偏高。'],
+    notice:'以上四项只是可核验字段，不是质量评级。',
+    reminder:'不能凭文献类型判定质量。'};
+  const s=setup(),root=new Node();s.ctx.mountPaperReading(root,data);
+  const rendered=text(root);
+  assert.match(rendered,/研究类型：随机对照试验/);assert.match(rendered,/样本量：120/);
+  assert.match(rendered,/盲法：摘要未报告/);assert.match(rendered,/不是质量评级/);
+  assert.ok(!rendered.includes('高质量'));
+});
+
+test('citation buttons export BibTeX or RIS for the current paper',async()=>{
+  const asked=[];
+  const s=setup(async(path,body)=>{asked.push([path,body]);return {content:'@article{pmid123,'};});
+  const root=new Node();s.ctx.mountPaperReading(root,response());
+  await button(root,'复制 BibTeX').listeners.click();
+  assert.equal(asked[0][0],'/api/export-citations');
+  assert.equal(asked[0][1].format,'bibtex');
+  assert.deepEqual([...asked[0][1].pmids],['123']);
+  assert.match(text(root),/@article\{pmid123/);
+  await button(root,'复制 RIS').listeners.click();
+  assert.equal(asked[1][1].format,'ris');
+});
