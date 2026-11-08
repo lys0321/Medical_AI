@@ -58,5 +58,100 @@ function mountPaperReading(container, data) {
     });
     container.appendChild(guide);
   }
+  /* ---------- 开放获取全文（可选，独立一层） ---------- */
+  const fulltext = data.fulltext;
+  if (fulltext && typeof fulltext === 'object') {
+    if (fulltext.available && Array.isArray(fulltext.sections) && fulltext.sections.length) {
+      const layer = el('section', 'reading-fulltext');
+      layer.appendChild(el('h4', null, '开放获取全文'));
+      const meta = ['许可：' + (fulltext.license || '未标注'), fulltext.pmcid || ''].filter(Boolean).join(' · ');
+      layer.appendChild(el('p', 'study-source', meta));
+      layer.appendChild(el('p', 'reading-notice', fulltext.notice || '原文段落，未翻译或改写。'));
+      fulltext.sections.forEach(section => {
+        const block = el('div', 'reading-section');
+        block.appendChild(el('h5', null, section.title || '全文段落'));
+        (Array.isArray(section.paragraphs) ? section.paragraphs : []).forEach(part => {
+          if (typeof part?.text !== 'string' || !part.text) return;
+          const quote = el('blockquote', 'reading-excerpt', part.text);
+          quote.appendChild(el('small', 'reading-cite', ' ' + (part.citation || ('[PMID:' + part.number + ']'))));
+          block.appendChild(quote);
+          if (part.truncated) block.appendChild(el('small', 'study-source', '本段仅显示开头，请回原文核对。'));
+        });
+        layer.appendChild(block);
+      });
+      container.appendChild(layer);
+    } else if (fulltext.reason === 'not_requested') {
+      container.appendChild(el('p', 'study-source', fulltext.message || '未请求全文。'));
+      const load = el('button', 'btn', '加载开放获取全文');
+      load.type = 'button';
+      load.addEventListener('click', async () => {
+        if (typeof api !== 'function') return;
+        load.disabled = true;
+        load.textContent = '正在获取全文…';
+        try {
+          const next = await api('/api/read-paper', {
+            pmid: paper.pmid, concept: data.concept || null,
+            question: data.question, include_fulltext: true
+          });
+          mountPaperReading(container, next);
+        } catch (error) {
+          load.disabled = false;
+          load.textContent = '重试加载开放获取全文';
+          container.appendChild(el('p', 'study-source', '全文获取失败：' + error.message));
+        }
+      });
+      container.appendChild(load);
+    } else {
+      container.appendChild(el('p', 'study-source',
+        (fulltext.message || '没有可用的开放获取全文，只能阅读摘要。') +
+        (fulltext.license ? '（许可：' + fulltext.license + '）' : '')));
+    }
+  }
+
+  /* ---------- 证据字段提示（不是质量评级） ---------- */
+  const grade = data.evidence_grade;
+  if (grade && grade.fields) {
+    const box = el('details', 'reading-evidence');
+    box.appendChild(el('summary', null, '证据字段提示（不是质量评级）'));
+    [['study_type', '研究类型'], ['sample_size', '样本量'],
+     ['randomization', '随机化'], ['blinding', '盲法']].forEach(([key, label]) => {
+      const field = grade.fields[key] || {};
+      const shown = field.status === 'reported'
+        ? String(field.value == null ? '' : field.value)
+        : (field.status === 'not_reported' ? '摘要未报告' : '未获取');
+      box.appendChild(el('p', 'study-source', label + '：' + shown + (field.source ? '（' + field.source + '）' : '')));
+    });
+    (Array.isArray(grade.hints) ? grade.hints : []).forEach(hint => {
+      box.appendChild(el('p', 'study-source', '· ' + hint));
+    });
+    box.appendChild(el('p', 'study-source', grade.notice || grade.reminder || ''));
+    container.appendChild(box);
+  }
+
+  /* ---------- 引文导出（BibTeX / RIS） ---------- */
+  if (/^\d{1,12}$/.test(String(paper.pmid || '')) && typeof api === 'function') {
+    const row = el('div', 'reading-export');
+    [['bibtex', '复制 BibTeX'], ['ris', '复制 RIS']].forEach(([format, label]) => {
+      const button = el('button', 'btn', label);
+      button.type = 'button';
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        try {
+          const out = await api('/api/export-citations', { pmids: [paper.pmid], format });
+          container.appendChild(el('pre', 'reading-citation', out.content || ''));
+          if (typeof navigator !== 'undefined' && navigator.clipboard) {
+            try { await navigator.clipboard.writeText(out.content || ''); } catch (_) {}
+          }
+        } catch (error) {
+          container.appendChild(el('p', 'study-source', '引文导出失败：' + error.message));
+        } finally {
+          button.disabled = false;
+        }
+      });
+      row.appendChild(button);
+    });
+    container.appendChild(row);
+  }
+
   if (data.warning) container.appendChild(el('p', 'study-source', data.warning));
 }
