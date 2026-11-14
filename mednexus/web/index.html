@@ -47,7 +47,6 @@
       <button class="nav-item" data-view="learn"><svg><use href="#i-learn"></use></svg><span>我的学习</span></button>
       <button class="nav-item" data-view="quiz"><svg><use href="#i-clip"></use></svg><span>学习评估</span></button>
         <button class="nav-item" data-view="ask"><svg><use href="#i-spark"></use></svg><span>教材答疑</span></button>
-      <button class="nav-item" data-view="drill"><svg><use href="#i-books"></use></svg><span>教材精练</span></button>
       <button class="nav-item" data-view="quicknotes"><svg><use href="#i-learn"></use></svg><span>速记自测</span></button>
       <button class="nav-item" data-view="books"><svg><use href="#i-books"></use></svg><span>知识库</span></button>
       <button class="nav-item" data-view="materials"><svg><use href="#i-books"></use></svg><span>课程资料与题库</span></button>
@@ -221,7 +220,13 @@
 
     <section class="view" id="view-quiz">
       <h1 class="page-title">学习评估</h1>
-      <p class="page-sub">先选章节，再选知识点出题；按「三个要点」逐点评分，答对一个要点不算掌握。数据来自《医枢》诊断引擎，全部保存在本机。</p>
+      <p class="page-sub">两种练法：<b>精选题库</b>按知识点逐要点评分，用来判断掌握程度；<b>教材章节</b>按教材的章抽原文考点出题，答完给出原句出处。两种都只记在本机。</p>
+      <div class="chips quiz-mode-bar" id="quizModeBar">
+        <button class="chip is-active" data-mode="concept" type="button">精选题库 · 按知识点</button>
+        <button class="chip" data-mode="book" type="button">教材章节 · 按书出题</button>
+      </div>
+      <div id="quizConceptMode">
+
       <article class="panel chapter-picker" id="quizChapterPanel">
         <div class="panel-head"><span class="panel-icon blue"><svg><use href="#i-books"></use></svg></span><h3>第一步 · 选择章节<small id="quizChapterHint">还没有选章节</small></h3></div>
         <div class="chips" id="quizUnits"></div>
@@ -256,11 +261,9 @@
         <div class="panel-head"><span class="panel-icon blue"><svg><use href="#i-clock"></use></svg></span><h3>学习报告<small>要点评分与前后变化</small></h3></div>
         <div id="learningReportBody">正在读取学习记录…</div>
       </article>
-    </section>
+      </div>
+      <div id="quizBookMode" hidden>
 
-    <section class="view" id="view-drill">
-      <h1 class="page-title">教材精练</h1>
-      <p class="page-sub">按教材的章出题：题干和选项都摘自《系统解剖学》考点速记的原文，答完能看到出处原句，方便回书核对。</p>
       <article class="panel chapter-picker" id="drillBookPanel">
         <div class="panel-head"><span class="panel-icon blue"><svg><use href="#i-books"></use></svg></span><h3>第一步 · 选择教材<small id="drillBookHint">还没有选教材</small></h3></div>
         <div class="chips" id="drillBooks"></div>
@@ -280,6 +283,7 @@
           <div class="panel-head"><span class="panel-icon amber"><svg><use href="#i-books"></use></svg></span><h3>本章小节<small id="drillSectionHint">选章节后显示</small></h3></div>
           <div id="drillSections" class="weak"></div>
         </article>
+      </div>
       </div>
     </section>
 

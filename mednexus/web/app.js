@@ -81,7 +81,7 @@ async function api(path, payload) {
 }
 
 /* ---------- 视图切换 ---------- */
-const VIEWS = ["home", "learn", "quiz", "ask", "drill", "quicknotes", "books", "materials", "research", "me"];
+const VIEWS = ["home", "learn", "quiz", "ask", "quicknotes", "books", "materials", "research", "me"];
 
 function showView(name, { restoreTask = true } = {}) {
   if (!VIEWS.includes(name)) name = "home";
@@ -96,10 +96,10 @@ function showView(name, { restoreTask = true } = {}) {
   if (name === "quiz") {
     renderQuiz(overviewData);
     loadLearningReport();
+    applyQuizMode();
     if (restoreTask && quizPhase === "empty") resumeActiveTask();
   }
   if (name === "quicknotes") loadQuicknotes();
-  if (name === "drill") loadDrill();
   if (name === "materials") {
     const quizPanel = $("imageQuizPanel");
     if (quizPanel) quizPanel.hidden = false;
@@ -2109,6 +2109,34 @@ async function checkBuild() {
 }
 
 /* ---------- 启动 ---------- */
+/* ---------- 学习评估的两种练法：精选题库 / 教材章节 ---------- */
+let quizMode = localStorage.getItem("mednexus-quiz-mode") || "concept";
+
+function applyQuizMode() {
+  const bar = $("quizModeBar");
+  if (!bar) return;
+  [...bar.querySelectorAll(".chip")].forEach((chip) => {
+    chip.classList.toggle("is-active", chip.dataset.mode === quizMode);
+  });
+  const concept = $("quizConceptMode");
+  const book = $("quizBookMode");
+  if (concept) concept.hidden = quizMode !== "concept";
+  if (book) book.hidden = quizMode !== "book";
+  if (quizMode === "book") loadDrill();
+}
+
+(function bindQuizMode() {
+  const bar = $("quizModeBar");
+  if (!bar) return;
+  bar.addEventListener("click", (event) => {
+    const chip = event.target.closest(".chip");
+    if (!chip || !chip.dataset.mode || chip.dataset.mode === quizMode) return;
+    quizMode = chip.dataset.mode;
+    localStorage.setItem("mednexus-quiz-mode", quizMode);
+    applyQuizMode();
+  });
+})();
+
 /* ---------- 教材精练：按教材章节出原文题 ---------- */
 let drillData = null;
 let drillBook = null;
@@ -2164,12 +2192,15 @@ function renderDrill() {
   });
 
   const chapters = entry ? entry.chapters : [];
+  // 一章不到 4 条考点就凑不出选项，直接不列，避免点了没题可出。
+  const usable = chapters.filter((c) => (c.count || 0) >= 4);
+  const skipped = chapters.length - usable.length;
   const chapterBox = $("drillChapters");
   chapterBox.innerHTML = "";
   if (!entry) {
     chapterBox.appendChild(el("p", "empty-line", "暂无可用教材。"));
   } else {
-    chapters.forEach((c) => {
+    usable.forEach((c) => {
       const chip = el("button", "chip" + (c.no === drillChapter ? " is-active" : ""),
         (c.title || "第" + c.no + "章") + " · " + c.count + " 条");
       chip.type = "button";
@@ -2183,8 +2214,10 @@ function renderDrill() {
     });
   }
 
-  const chapter = chapters.find((c) => c.no === drillChapter) || null;
-  $("drillBookHint").textContent = entry ? entry.book + " · 共 " + chapters.length + " 章" : "还没有选教材";
+  const chapter = usable.find((c) => c.no === drillChapter) || null;
+  $("drillBookHint").textContent = entry
+    ? entry.book + " · 可练 " + usable.length + " 章" + (skipped ? "（另有 " + skipped + " 章考点太少，暂不出题）" : "")
+    : "还没有选教材";
   $("drillChapterHint").textContent = chapter
     ? chapter.title + " · " + chapter.count + " 条考点"
     : (entry ? "还没有选章节" : "先选教材");
@@ -2226,7 +2259,6 @@ function renderDrillArea(chapter) {
   if (!drillTask) {
     const start = el("button", "btn btn-primary", "开始这一章");
     start.type = "button";
-    start.disabled = drillBusy;
     start.addEventListener("click", () => startDrill());
     box.appendChild(el("p", "study-source",
       "从「" + (chapter.title || "") + "」的 " + chapter.count + " 条考点里随机抽一条：可能是给术语选原文解释，也可能把术语挖空让你选。"));
@@ -2240,14 +2272,12 @@ function renderDrillArea(chapter) {
   drillTask.options.forEach((option) => {
     const btn = el("button", "drill-option", option);
     btn.type = "button";
-    btn.disabled = drillBusy;
     btn.addEventListener("click", () => answerDrill(option));
     options.appendChild(btn);
   });
   box.append(head, prompt, options);
   const skip = el("button", "btn", "换一道");
   skip.type = "button";
-  skip.disabled = drillBusy;
   skip.addEventListener("click", () => startDrill());
   box.appendChild(skip);
 }
@@ -2280,12 +2310,14 @@ async function startDrill() {
   $("drillArea").textContent = "正在从这一章的原文里抽题…";
   try {
     drillTask = await api("/api/kaodian/task", { book: drillBook, chapter: drillChapter });
-    renderDrillArea(drillBookEntry()?.chapters.find((c) => c.no === drillChapter) || null);
   } catch (error) {
-    $("drillArea").textContent = "抽题失败：" + error.message;
-  } finally {
     drillBusy = false;
+    $("drillArea").textContent = "抽题失败：" + error.message;
+    return;
   }
+  // 先解除忙碌状态再渲染：否则按钮会带着 disabled 生成，之后不再重绘，点了没反应。
+  drillBusy = false;
+  renderDrillArea(drillBookEntry()?.chapters.find((c) => c.no === drillChapter) || null);
 }
 
 async function answerDrill(choice) {

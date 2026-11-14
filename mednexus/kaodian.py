@@ -95,6 +95,16 @@ def _shorten(text, limit=58):
     return text if len(text) <= limit else text[:limit].rstrip("，、；") + "…"
 
 
+def _masked(tail):
+    """挖空题题面：把定义句开头的连接词去掉，避免出现「是……描述的是？」这种话。"""
+    text = tail.strip()
+    for lead in ("参与构成", "主要位于", "主要", "包括", "分为", "具有", "位于", "是由", "是", "由"):
+        if text.startswith(lead):
+            text = text[len(lead):].lstrip("，、 ")
+            break
+    return _shorten(text, 90)
+
+
 def build(book, no, rng=None):
     """出一道单选题；题目与选项都只从这一章的原文里取。"""
     entries = chapter_items(book, no)
@@ -128,7 +138,7 @@ def build(book, no, rng=None):
                 break
     else:
         kind = "define"
-        prompt = "%s\n\n上面这段描述的是？" % _shorten(target["tail"], 90)
+        prompt = "%s\n\n上面这段描述的是？" % _masked(target["tail"])
         correct = target["term"]
         others = []
         for p in pool:

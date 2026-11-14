@@ -54,8 +54,11 @@ def main():
         matches = []
         for page in sorted(by_page):
             text = norm(" ".join(by_page[page]))
-            for m in re.finditer(r"第([一二三四五六七八九十]{1,3})章\s*" + TITLE, text):
-                num = CN.get(m.group(1))
+            # 人卫第10版里《系统解剖学》《生理学》用「第一章」，《组织学与胚胎学》用「第1章」，
+            # 两种都要认，否则组胚会一章都识别不出来。
+            for m in re.finditer(r"第\s*([一二三四五六七八九十]{1,3}|\d{1,2})\s*章\s*" + TITLE, text):
+                raw = m.group(1)
+                num = int(raw) if raw.isdigit() else CN.get(raw)
                 if not num:
                     continue
                 before = text[max(0, m.start() - 14):m.start()]
@@ -65,7 +68,7 @@ def main():
                 continue
             # 强证据：章首页带「本章思维导图 / 本章数字资源」标记，或标题在页首。
             # 弱证据：章号正好是下一个、页码在上一章之后（用来补识别不到的章）。
-            if strong or (found and num == max(found) + 1 and page > found[max(found)][0]):
+            if strong or (found and num > max(found) and page > found[max(found)][0]):
                 found[num] = (page, clean_title(title))
         if not found:
             continue
