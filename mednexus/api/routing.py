@@ -36,12 +36,13 @@ import tutor_model
 import vision
 from reading import build_reading
 from api.core import (ROOT, LOCK, DEFAULT_LEARNER, DB_PATH, QUICK_NOTES_PATH,
-                      QUICK_NOTES_SOURCE, API_KEY, connect, event, init_db)
+                      QUICK_NOTES_SOURCE, API_KEY, connect, event, init_db, app_build)
 from api.task import make_task, request_hint, tutor_snapshot, tutor_turn
 from api.answer import grade, answer_text
 from api.study import study_payload, import_sources, image_quiz
 from api.ask import ask, ask_compat, model_json
 from api.research import research_gate, pubmed, pubmed_compat, export_citations
+from api.drill import catalog as drill_catalog, make_task as drill_task, answer as drill_answer
 from api.report import (snapshot, report, export_learning, overview_payload,
                         reset_learning, record_study_seconds, time_stats)
 
@@ -200,6 +201,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send({'error': str(e)}, 400)
         if path == "/api/health":
             return self.send({"ok": True, "name": "MedNexus"})
+        if path == "/api/version":
+            # 前端用它判断“这个窗口是不是旧页面”，旧页面会提示刷新。
+            return self.send({"ok": True, "name": "MedNexus", "build": app_build()})
         if path in ("/api/quick-notes", "/api/quick-notes/source.pdf"):
             if not self.client_address[0].startswith("127."):
                 return self.send({"error": "速记资料仅供本机使用"}, 403)
@@ -251,6 +255,9 @@ class Handler(BaseHTTPRequestHandler):
                     # 书页首页：教材规模 + 最近学习 + 薄弱点 + 运行状态
                     with LOCK, connect() as db:
                         return self.send(overview_payload(db, learner))
+                if path == "/api/kaodian":
+                    # 教材精练的目录：哪几本教材、每本有哪些章、每章多少条考点
+                    return self.send(drill_catalog())
                 with LOCK, connect() as db:
                     if path == "/api/bootstrap":
                         return self.send(snapshot(db, learner))
@@ -267,6 +274,9 @@ class Handler(BaseHTTPRequestHandler):
         if not target.is_relative_to(ROOT / "web") or not target.is_file():
             return self.send({"error": "文件不存在"}, 404)
         raw = target.read_bytes()
+        if target.name == "index.html":
+            # 首页里的 __BUILD__ 会替换成当前构建标记，用来识别浏览器里的旧页面。
+            raw = raw.replace(b"__BUILD__", app_build().encode("ascii"))
         self.send_response(200)
         self.send_header("Content-Type", mimetypes.guess_type(target)[0] or "application/octet-stream")
         self.send_header("Content-Length", str(len(raw)))
@@ -421,7 +431,11 @@ class Handler(BaseHTTPRequestHandler):
                 cid = body.get("concept", "oculomotor")
                 if path in ("/api/task", "/api/study", "/api/research") and cid not in CONCEPT_MAP:
                     raise InputError("未知知识点")
-                if path == "/api/task":
+                if path == "/api/kaodian/task":
+                    out = drill_task(db, learner, body)
+                elif path == "/api/kaodian/answer":
+                    out = drill_answer(db, learner, body)
+                elif path == "/api/task":
                     out = make_task(db, learner, cid, body.get("kind", "auto"))
                 elif path == "/api/answer":
                     out = grade(db, learner, body)

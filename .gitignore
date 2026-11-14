@@ -30,6 +30,7 @@ reference-review/
 *.pdf
 book_*.jsonl
 chunks.jsonl
+组胚复习资料.docx
 mednexus/data/quick_notes_cards.json
 mednexus/data/course_materials/
 embeddings.npy

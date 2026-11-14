@@ -81,7 +81,7 @@ async function api(path, payload) {
 }
 
 /* ---------- 视图切换 ---------- */
-const VIEWS = ["home", "learn", "quiz", "ask", "quicknotes", "books", "materials", "research", "me"];
+const VIEWS = ["home", "learn", "quiz", "ask", "drill", "quicknotes", "books", "materials", "research", "me"];
 
 function showView(name, { restoreTask = true } = {}) {
   if (!VIEWS.includes(name)) name = "home";
@@ -99,6 +99,7 @@ function showView(name, { restoreTask = true } = {}) {
     if (restoreTask && quizPhase === "empty") resumeActiveTask();
   }
   if (name === "quicknotes") loadQuicknotes();
+  if (name === "drill") loadDrill();
   if (name === "materials") {
     const quizPanel = $("imageQuizPanel");
     if (quizPanel) quizPanel.hidden = false;
@@ -952,6 +953,7 @@ async function refreshOverview() {
   } catch (e) {
     console.warn("overview failed", e);
     renderLearningPlan(overviewData?.learning_plan, e.message);
+    showDataNotice(e.message);
   }
 }
 
@@ -1048,7 +1050,10 @@ $$(".quick-card").forEach((card) => {
     const act = card.dataset.act;
     if (act === "research") { resetResearchContext(); showView("research"); $("pmQ").focus(); return; }
     if (act === "learn") {
-      showView("learn");
+      // 开始学习 = 先选章节再出题；章节选择在「学习评估」页第一步
+      showView("quiz", { restoreTask: false });
+      const chapterPanel = $("quizChapterPanel");
+      if (chapterPanel) chapterPanel.scrollIntoView({ block: "start", behavior: "smooth" });
       return;
     }
     if (act === "quiz") { showView("quiz"); return; }
@@ -1133,7 +1138,7 @@ function renderQuiz(data) {
       });
       unitBox.appendChild(b);
     });
-    if (!units.length) unitBox.appendChild(el("p", "study-source", "课程单元读取失败，请刷新页面。"));
+    if (!units.length) unitBox.appendChild(el("p", "study-source", "没有读到章节数据（页面构建 " + (PAGE_BUILD || "未知") + "）。请确认服务是最新版本：关闭窗口后重新双击「医枢 MedNexus」，再按 Ctrl+F5 刷新。"));
   }
   const chapterHint = $("quizChapterHint");
   if (chapterHint) {
@@ -2056,7 +2061,250 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") flushHeartbeat();
 });
 
+/* ---------- 旧页面自检：服务端更新了而窗口还是旧版时，提示刷新 ---------- */
+const PAGE_BUILD = (document.querySelector('meta[name="app-build"]') || {}).content || "";
+
+function showStaleNotice(serverBuild) {
+  if (document.getElementById("staleNotice")) return;
+  const bar = el("div", "stale-notice");
+  bar.id = "staleNotice";
+  bar.appendChild(el("span", null, "这个窗口是旧版页面（本页 " + (PAGE_BUILD || "未知") + "，服务端 " + serverBuild + "），新功能可能看不到。"));
+  const btn = el("button", "btn btn-primary small", "刷新到最新版");
+  btn.type = "button";
+  btn.addEventListener("click", () => location.reload());
+  bar.appendChild(btn);
+  document.body.appendChild(bar);
+}
+
+function showDataNotice(message) {
+  let bar = document.getElementById("dataNotice");
+  if (!bar) {
+    bar = el("div", "stale-notice data-notice");
+    bar.id = "dataNotice";
+    document.body.appendChild(bar);
+  }
+  bar.textContent = "";
+  bar.appendChild(el("span", null, "学习数据没读到：" + (message || "服务没有返回数据") +
+    "（页面构建 " + (PAGE_BUILD || "未知") + "）。可以先关闭本窗口，重新双击「医枢 MedNexus」，再按 Ctrl+F5 刷新。"));
+  const retry = el("button", "btn btn-primary small", "重试");
+  retry.type = "button";
+  retry.addEventListener("click", async () => {
+    retry.disabled = true;
+    await refreshOverview();
+    retry.disabled = false;
+  });
+  bar.appendChild(retry);
+}
+
+async function checkBuild() {
+  if (!PAGE_BUILD) return;
+  try {
+    const res = await fetch("/api/version", { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.build && data.build !== PAGE_BUILD) showStaleNotice(data.build);
+  } catch (err) {
+    /* 版本检查失败不影响正常使用 */
+  }
+}
+
 /* ---------- 启动 ---------- */
+/* ---------- 教材精练：按教材章节出原文题 ---------- */
+let drillData = null;
+let drillBook = null;
+let drillChapter = null;
+let drillTask = null;
+let drillResult = null;
+let drillBusy = false;
+let drillDone = 0;
+let drillRight = 0;
+
+async function loadDrill() {
+  if (drillData) {
+    renderDrill();
+    return;
+  }
+  const box = $("drillBooks");
+  box.textContent = "正在读取教材目录…";
+  try {
+    drillData = await api("/api/kaodian");
+  } catch (error) {
+    box.textContent = "教材目录读取失败：" + error.message;
+    return;
+  }
+  if (!drillData.available) {
+    box.textContent = drillData.message || "本机还没有考点题库。";
+    return;
+  }
+  const books = drillData.books || [];
+  drillBook = drillBook || (books[0] && books[0].book) || null;
+  renderDrill();
+}
+
+function drillBookEntry() {
+  return (drillData?.books || []).find((b) => b.book === drillBook) || null;
+}
+
+function renderDrill() {
+  const entry = drillBookEntry();
+  const bookBox = $("drillBooks");
+  bookBox.innerHTML = "";
+  (drillData.books || []).forEach((item) => {
+    const chip = el("button", "chip" + (item.book === drillBook ? " is-active" : ""), item.book);
+    chip.type = "button";
+    chip.addEventListener("click", () => {
+      if (drillBook === item.book) return;
+      drillBook = item.book;
+      drillChapter = null;
+      drillTask = null;
+      drillResult = null;
+      renderDrill();
+    });
+    bookBox.appendChild(chip);
+  });
+
+  const chapters = entry ? entry.chapters : [];
+  const chapterBox = $("drillChapters");
+  chapterBox.innerHTML = "";
+  if (!entry) {
+    chapterBox.appendChild(el("p", "empty-line", "暂无可用教材。"));
+  } else {
+    chapters.forEach((c) => {
+      const chip = el("button", "chip" + (c.no === drillChapter ? " is-active" : ""),
+        (c.title || "第" + c.no + "章") + " · " + c.count + " 条");
+      chip.type = "button";
+      chip.addEventListener("click", () => {
+        drillChapter = c.no;
+        drillTask = null;
+        drillResult = null;
+        renderDrill();
+      });
+      chapterBox.appendChild(chip);
+    });
+  }
+
+  const chapter = chapters.find((c) => c.no === drillChapter) || null;
+  $("drillBookHint").textContent = entry ? entry.book + " · 共 " + chapters.length + " 章" : "还没有选教材";
+  $("drillChapterHint").textContent = chapter
+    ? chapter.title + " · " + chapter.count + " 条考点"
+    : (entry ? "还没有选章节" : "先选教材");
+  $("drillChapterNote").textContent = chapter
+    ? "本章共 " + chapter.count + " 条考点；其中术语与完整解释齐全的会用来出题，其余在「速记自测」里逐条背诵。"
+    : "选好章节后点「开始这一章」，会从本章原文里抽一条考点出题。";
+
+  const sectionBox = $("drillSections");
+  sectionBox.innerHTML = "";
+  if (chapter) {
+    $("drillSectionHint").textContent = (chapter.sections || []).length + " 个小节";
+    (chapter.sections || []).forEach((s) => {
+      const row = el("div", "unit-row");
+      row.appendChild(el("span", "unit-name", s.name || "未分节"));
+      row.appendChild(el("span", "unit-count", s.count + " 条"));
+      sectionBox.appendChild(row);
+    });
+    if (!(chapter.sections || []).length) sectionBox.appendChild(el("p", "empty-line", "这一章没有小节信息。"));
+  } else {
+    $("drillSectionHint").textContent = "选章节后显示";
+    sectionBox.appendChild(el("p", "empty-line", "先选好教材与章节。"));
+  }
+
+  $("drillKind").textContent = drillDone ? "已练 " + drillDone + " 道 · 对 " + drillRight + " 道" : "尚未开始";
+  renderDrillArea(chapter);
+}
+
+function renderDrillArea(chapter) {
+  const box = $("drillArea");
+  box.innerHTML = "";
+  if (!chapter) {
+    box.appendChild(el("p", "empty-line", "先在上面选教材与章节，再开始出题。"));
+    return;
+  }
+  if (drillResult) {
+    renderDrillResult(box);
+    return;
+  }
+  if (!drillTask) {
+    const start = el("button", "btn btn-primary", "开始这一章");
+    start.type = "button";
+    start.disabled = drillBusy;
+    start.addEventListener("click", () => startDrill());
+    box.appendChild(el("p", "study-source",
+      "从「" + (chapter.title || "") + "」的 " + chapter.count + " 条考点里随机抽一条：可能是给术语选原文解释，也可能把术语挖空让你选。"));
+    box.appendChild(start);
+    return;
+  }
+  const kindText = drillTask.kind === "define" ? "原文挖空 · 选术语" : "术语 · 选原文解释";
+  const head = el("p", "study-source", kindText + " · 第 " + drillTask.chapter + " 章");
+  const prompt = el("p", "drill-prompt", drillTask.prompt);
+  const options = el("div", "drill-options");
+  drillTask.options.forEach((option) => {
+    const btn = el("button", "drill-option", option);
+    btn.type = "button";
+    btn.disabled = drillBusy;
+    btn.addEventListener("click", () => answerDrill(option));
+    options.appendChild(btn);
+  });
+  box.append(head, prompt, options);
+  const skip = el("button", "btn", "换一道");
+  skip.type = "button";
+  skip.disabled = drillBusy;
+  skip.addEventListener("click", () => startDrill());
+  box.appendChild(skip);
+}
+
+function renderDrillResult(box) {
+  const result = drillResult;
+  const card = el("div", "drill-result" + (result.correct ? " is-right" : " is-wrong"));
+  card.appendChild(el("p", "drill-verdict", result.correct ? "✓ 答对了" : "✗ 答错了，正确答案在下面对比"));
+  card.appendChild(el("p", "drill-prompt", result.prompt));
+  result.options.forEach((option) => {
+    const cls = "drill-option";
+    const row = el("p", cls + (option === result.answer ? " is-correct" : "") + (option === result.choice && !result.correct ? " is-wrong" : ""), option);
+    card.appendChild(row);
+  });
+  const source = el("p", "drill-source",
+    "原文出处：第 " + result.source.no + " 条" + (result.source.section ? "（" + result.source.section + "）" : "") + " —— " + result.source.text);
+  card.appendChild(source);
+  card.appendChild(el("p", "study-source", result.notice));
+  const again = el("button", "btn btn-primary", "再来一道");
+  again.type = "button";
+  again.addEventListener("click", () => startDrill());
+  card.appendChild(again);
+  box.appendChild(card);
+}
+
+async function startDrill() {
+  if (drillBusy || !drillBook || drillChapter == null) return;
+  drillBusy = true;
+  drillResult = null;
+  $("drillArea").textContent = "正在从这一章的原文里抽题…";
+  try {
+    drillTask = await api("/api/kaodian/task", { book: drillBook, chapter: drillChapter });
+    renderDrillArea(drillBookEntry()?.chapters.find((c) => c.no === drillChapter) || null);
+  } catch (error) {
+    $("drillArea").textContent = "抽题失败：" + error.message;
+  } finally {
+    drillBusy = false;
+  }
+}
+
+async function answerDrill(choice) {
+  if (drillBusy || !drillTask) return;
+  drillBusy = true;
+  try {
+    drillResult = await api("/api/kaodian/answer", { token: drillTask.token, choice });
+    drillTask = null;
+    drillDone += 1;
+    if (drillResult.correct) drillRight += 1;
+    $("drillKind").textContent = "已练 " + drillDone + " 道 · 对 " + drillRight + " 道";
+  } catch (error) {
+    toast("判分失败：" + error.message);
+  } finally {
+    drillBusy = false;
+    renderDrillArea(drillBookEntry()?.chapters.find((c) => c.no === drillChapter) || null);
+  }
+}
+
 (async function init() {
   await refreshOverview();
   restoreResearchWorkspace();
@@ -2069,4 +2317,5 @@ document.addEventListener("visibilitychange", () => {
     ask(preset);
   }
   startHeartbeat();
+  checkBuild();
 })();

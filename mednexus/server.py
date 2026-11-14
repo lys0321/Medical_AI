@@ -41,6 +41,7 @@ from api.ask import (model_json, ask, ask_compat, _textbook_key_points)
 from api.research import (research_gate, ncbi_get, ncbi_get_url, windows_https_get, xmltext, pubmed, cached_paper, fetch_fulltext, export_citations, _check_research_privacy, research_query_for, research_request, pubmed_compat)
 from api.report import (snapshot, report, export_learning, reset_learning, _book_stats, _recent, _weak, overview_payload,
                         record_study_seconds, time_stats, unit_stats)
+from api.drill import catalog as drill_catalog, make_task as drill_task, answer as drill_answer
 from api.routing import Handler, main, ThreadingHTTPServer
 import api.task as _task
 import api.answer as _answer
@@ -49,6 +50,7 @@ import api.ask as _ask
 import api.research as _research
 import api.report as _report
 import api.routing as _routing
+import api.drill as _drill
 from knowledge import CONCEPTS, CONCEPT_MAP, QUESTION_MAP, SOURCES, COURSE
 import materials
 import textbook
@@ -66,7 +68,7 @@ _CORE_NAMES = {'attempts_get', 'DEFAULT_LEARNER', 'TUTOR_LOCKS', 'event', 'conne
 # 拆分后同一个名字可能在多个域模块里各有一份绑定。既有代码（含测试夹具）习惯
 # 写 `server.X = ...` 来替换实现，这里把赋值同步到所有持有该名字的模块，
 # 保证“改 server.X”仍然等于“改真正被调用的那个实现”。
-_DOMAIN_MODULES = (core, _task, _answer, _study, _ask, _research, _report, _routing)
+_DOMAIN_MODULES = (core, _task, _answer, _study, _ask, _research, _report, _routing, _drill)
 
 
 class _CompatModule(types.ModuleType):

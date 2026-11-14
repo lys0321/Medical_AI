@@ -42,6 +42,23 @@ import vision
 
 ROOT = Path(__file__).resolve().parent.parent
 
+# 前端构建标记：取 web/ 下静态资源的最新修改时间。
+# 浏览器里的旧页面用 /api/version 与本页面 meta 对比，不一致就提示刷新，
+# 避免“代码已更新、窗口还是旧页面”这种假故障。
+_BUILD_NAMES = ("index.html", "app.js", "styles.css")
+
+
+def app_build():
+    newest = 0.0
+    for name in _BUILD_NAMES:
+        try:
+            newest = max(newest, (ROOT / "web" / name).stat().st_mtime)
+        except OSError:
+            continue
+    if not newest:
+        return "dev"
+    return datetime.fromtimestamp(newest, SHANGHAI).strftime("%Y%m%d%H%M")
+
 
 def _load_env_file():
     """读仓库里的 .env（已被 .gitignore 排除），让“内置 API”不用每次手设环境变量。

@@ -26,11 +26,14 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# 实测偏移：局部解剖学 +19、生化 +29、生理学 +23
+# 实测偏移：局部解剖学 +19、生化 +29、生理学 +23、系统解剖学 +27、组织学与胚胎学 +23
+# 偏移 = PDF 页号 − 印刷页号；每本书都要用正文页重新核对，错一本整本引用都会偏。
 BOOKS = [
     {"name": "局部解剖学", "edition": "第10版", "jsonl": "book_jiepou.jsonl", "offset": 19},
     {"name": "生物化学与分子生物学", "edition": "第10版", "jsonl": "book_shenghua.jsonl", "offset": 29},
     {"name": "生理学", "edition": "第10版", "jsonl": "book_shengli.jsonl", "offset": 23},
+    {"name": "系统解剖学", "edition": "第10版", "jsonl": "book_xtjx.jsonl", "offset": 27},
+    {"name": "组织学与胚胎学", "edition": "第10版", "jsonl": "book_zzpx.jsonl", "offset": 23},
 ]
 
 MAX_LEN = 320      # 单块上限；医学教材概念密集，块太大检索会不准

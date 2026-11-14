@@ -4,9 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#eef4ff">
+<meta name="app-build" content="__BUILD__">
 <title>医枢 MedNexus · 医学学习工作台</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%233b6ef6'/%3E%3Ctext x='16' y='22' font-size='16' text-anchor='middle' fill='white' font-family='sans-serif'%3E页%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=__BUILD__">
 <link rel="stylesheet" href="tutor-chat.css">
 <link rel="stylesheet" href="course-catalog.css">
 <link rel="stylesheet" href="learning-report.css">
@@ -46,6 +47,7 @@
       <button class="nav-item" data-view="learn"><svg><use href="#i-learn"></use></svg><span>我的学习</span></button>
       <button class="nav-item" data-view="quiz"><svg><use href="#i-clip"></use></svg><span>学习评估</span></button>
         <button class="nav-item" data-view="ask"><svg><use href="#i-spark"></use></svg><span>教材答疑</span></button>
+      <button class="nav-item" data-view="drill"><svg><use href="#i-books"></use></svg><span>教材精练</span></button>
       <button class="nav-item" data-view="quicknotes"><svg><use href="#i-learn"></use></svg><span>速记自测</span></button>
       <button class="nav-item" data-view="books"><svg><use href="#i-books"></use></svg><span>知识库</span></button>
       <button class="nav-item" data-view="materials"><svg><use href="#i-books"></use></svg><span>课程资料与题库</span></button>
@@ -54,6 +56,7 @@
     </nav>
 
     <p class="side-quote">医学不只是知识<br>更是对生命的理解</p>
+<p class="build-stamp" id="buildStamp">构建 __BUILD__</p>
   </aside>
 
   <main class="main">
@@ -255,6 +258,31 @@
       </article>
     </section>
 
+    <section class="view" id="view-drill">
+      <h1 class="page-title">教材精练</h1>
+      <p class="page-sub">按教材的章出题：题干和选项都摘自《系统解剖学》考点速记的原文，答完能看到出处原句，方便回书核对。</p>
+      <article class="panel chapter-picker" id="drillBookPanel">
+        <div class="panel-head"><span class="panel-icon blue"><svg><use href="#i-books"></use></svg></span><h3>第一步 · 选择教材<small id="drillBookHint">还没有选教材</small></h3></div>
+        <div class="chips" id="drillBooks"></div>
+        <p class="study-source" id="drillBookNote">题库来自本机生成的考点速记（OCR 整理），题面与选项均为原文，不做改写。</p>
+      </article>
+      <article class="panel chapter-picker" id="drillChapterPanel">
+        <div class="panel-head"><span class="panel-icon green"><svg><use href="#i-learn"></use></svg></span><h3>第二步 · 选择章节<small id="drillChapterHint">先选教材</small></h3></div>
+        <div class="chips" id="drillChapters"></div>
+        <p class="study-source" id="drillChapterNote">选好章节后点「开始这一章」，会从本章原文里抽一条考点出题。</p>
+      </article>
+      <div class="two-col">
+        <article class="panel">
+          <div class="panel-head"><span class="panel-icon violet"><svg><use href="#i-clip"></use></svg></span><h3>本章练习<small id="drillKind">尚未开始</small></h3></div>
+          <div id="drillArea"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><span class="panel-icon amber"><svg><use href="#i-books"></use></svg></span><h3>本章小节<small id="drillSectionHint">选章节后显示</small></h3></div>
+          <div id="drillSections" class="weak"></div>
+        </article>
+      </div>
+    </section>
+
     <section class="view" id="view-quicknotes">
       <h1 class="page-title">系统解剖学 · 速记自测</h1>
       <p class="page-sub">来自你提供的 37 页考点速记。先看提示并口述，再翻开答案自行核对；扫描识别内容尚未逐条审核，不计入正式掌握度。</p>
@@ -446,7 +474,7 @@
 <script src="learning-report.js"></script>
 <script src="paper-reading.js"></script>
 <script src="research-query.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=__BUILD__"></script>
 <script src="materials.js"></script>
 <script src="image-quiz.js"></script>
 </body>
