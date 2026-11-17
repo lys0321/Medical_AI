@@ -402,6 +402,18 @@
 
       <article class="profile-card" id="profileCard"></article>
 
+      <article class="panel cloud-panel" id="cloudPanel" hidden>
+        <div class="panel-head"><span class="panel-icon blue"><svg><use href="#i-spark"></use></svg></span><h3>跨设备同步<small>可选 · 本机仍是唯一真相源</small></h3></div>
+        <p class="note-text" id="cloudHint">登录后可在不同设备间同步学习进度与统计。只上传学习摘要，不含教材原文、作答/提问原文或身份标识；上传与恢复都由你手动触发。</p>
+        <div class="cloud-actions">
+          <button class="btn btn-primary" id="cloudSignIn" type="button">使用 WorkBuddy 登录</button>
+          <button class="btn" id="cloudUpload" type="button" disabled>上传到云</button>
+          <button class="btn" id="cloudDownload" type="button" disabled>从云恢复</button>
+          <button class="btn" id="cloudSignOut" type="button" hidden>退出登录</button>
+        </div>
+        <p class="study-source" id="cloudStatus">云服务未连接时不影响本机任何功能。</p>
+      </article>
+
       <div class="me-stats" id="meStats"></div>
 
       <div class="me-grid">
@@ -478,6 +490,9 @@
 <script src="learning-report.js"></script>
 <script src="paper-reading.js"></script>
 <script src="research-query.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"></script>
+<script src="cloud-config.js"></script>
+<script src="cloud.js"></script>
 <script src="app.js?v=__BUILD__"></script>
 <script src="materials.js"></script>
 <script src="image-quiz.js"></script>

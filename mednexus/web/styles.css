@@ -877,3 +877,12 @@ svg { width: 1.2em; height: 1.2em; fill: none; stroke: currentColor; stroke-widt
 .quiz-mode-bar .chip { padding: 8px 16px; font-size: 13.5px; }
 .quiz-mode-bar .chip.is-active { background: var(--blue); border-color: var(--blue); color: #fff; }
 #quizBookMode[hidden], #quizConceptMode[hidden] { display: none; }
+/* 跨设备同步面板 */
+.cloud-panel { margin-bottom: 16px; }
+.cloud-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.cloud-actions .btn[hidden] { display: none; }
+
+/* 第五代编排闭环建议卡 */
+.next-loop-card { margin: 12px 0; padding: 12px 14px; border-radius: 12px; background: #f6f9ff; border: 1px solid #e2ebfa; }
+.next-loop-card h4 { margin: 0 0 6px; font-size: 14px; color: var(--ink-1, #1b2541); }
+.next-loop-line { margin: 5px 0; font-size: 13.5px; line-height: 1.7; color: var(--ink-2, #33405f); }

@@ -1,6 +1,25 @@
 /* Learning reports use saved assessment records, never dialogue as a score. */
 const learningReportStates = new WeakMap();
 
+/* 编排闭环建议卡：诊断→变式重测→重测时间。只呈现建议与原文要点，不给结论。 */
+function renderNextLoop(loop) {
+  if (!loop || !loop.next_activity) return null;
+  const card = el('section', 'next-loop-card');
+  card.append(el('h4', '', '下一步：针对性补救'),
+    el('p', 'report-boundary', '根据历史错答自动归纳，建议一次变式重测。不判定已掌握，要点均来自原题原文。'));
+  const a = loop.next_activity;
+  card.appendChild(el('p', 'next-loop-line', `误区归类：${a.misconception || '未判定'} · ${a.concept_name || a.concept || ''}`));
+  if (a.remediation || (loop.diagnoses && loop.diagnoses[0]?.remediation)) {
+    card.appendChild(el('p', 'next-loop-line', a.remediation || loop.diagnoses[0].remediation));
+  }
+  if (a.variation?.angle) card.appendChild(el('p', 'study-source', a.variation.angle));
+  const labels = (a.retest_points || []).map(p => p.label).filter(Boolean);
+  if (labels.length) card.appendChild(el('p', 'next-loop-line', `重测要点：${labels.join('、')}`));
+  const when = a.due_at ? new Date(a.due_at * 1000).toLocaleString('zh-CN') : '尽快';
+  card.appendChild(el('p', 'study-source', `建议重测时间：${when}（${a.timing_basis || ''}）`));
+  return card;
+}
+
 function mountLearningReport(container, data, options = {}) {
   if (!container) return;
   const previous = learningReportStates.get(container);
@@ -24,6 +43,10 @@ function mountLearningReport(container, data, options = {}) {
   container.appendChild(el('p', 'study-source', errorCounts.length
     ? '历史错答要点分类：' + errorCounts.map(([name, count]) => `${name} ${count} 次`).join('、')
     : '尚无错答要点分类记录。'));
+
+  // 第五代编排闭环：只展示"下一步建议"，不改分数、不判定掌握。无数据时静默跳过。
+  const loopCard = renderNextLoop(data?.next_loop);
+  if (loopCard) container.appendChild(loopCard);
 
   const attemptedConcepts = (data?.concepts || []).filter(row => row.attempts);
   if (attemptedConcepts.length) {

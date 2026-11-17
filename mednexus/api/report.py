@@ -73,8 +73,17 @@ def report(db, learner):
                 errors[p.get("category", "未分类")] += 1
     text_rows = [a for a in rows if a["kind"] != "image"]
     events = [dict(r) for r in db.execute("SELECT kind,concept,payload,created FROM events WHERE learner=? ORDER BY id DESC LIMIT 50", (learner,))]
+    # 第五代编排闭环：从结构化作答给出「下一步补救」建议，不改任何分数或记录。
+    # 失败时降级为不可用，绝不让报告接口因编排模块出错而 500。
+    try:
+        import orchestration
+        next_loop = orchestration.loop_step(CONCEPTS, rows)
+    except Exception:
+        next_loop = None
+
     return {**snap, "errors": dict(errors), "history": [{"id": a["id"], "concept": a["concept"], "kind": a["kind"], "score": round(a["score"] * 100), "created": a["created"], "result": json.loads(a["payload"])} for a in text_rows], "events": events,
             "evidence_report": build_report_evidence(text_rows, QUESTION_MAP),
+            "next_loop": next_loop,
             "method": "要点等权计分；EMA=0.4×旧值+0.6×本次得分（首次为本次值）。掌握需两个不同题目独立达标、包含迁移题、最近两次均独立≥80%且EMA≥80%。提示作答属于辅助练习，看过不算掌握；组胚识图题单独统计，不计入这里。此规则是原型设计，未作学习效果验证。"}
 
 

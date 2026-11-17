@@ -2337,9 +2337,73 @@ async function answerDrill(choice) {
   }
 }
 
+/* ---------- 可选云同步（本机优先，未登录/不可用时零影响） ---------- */
+async function initCloudSync() {
+  const C = window.MedNexusCloud;
+  const panel = $("cloudPanel");
+  if (!C || !C.available() || !panel) return;   // SDK 未加载则整块隐藏
+  panel.hidden = false;
+  const status = $("cloudStatus"), hint = $("cloudHint");
+  const btnIn = $("cloudSignIn"), btnUp = $("cloudUpload"), btnDown = $("cloudDownload"), btnOut = $("cloudSignOut");
+
+  function paint(user) {
+    const on = !!user;
+    btnIn.hidden = on; btnOut.hidden = !on;
+    btnUp.disabled = !on; btnDown.disabled = !on;
+    hint.textContent = on
+      ? "已登录" + (user.name ? "（" + user.name + "）" : "") + "。上传只发送学习摘要；从云恢复会覆盖当前浏览器的进度与统计，请先确认。"
+      : "登录后可在不同设备间同步学习进度与统计。只上传学习摘要，不含教材原文、作答/提问原文或身份标识。";
+  }
+
+  try {
+    const cb = await C.handleCallback();          // 先处理 OAuth 回调，早于任何路由守卫
+    if (cb.error) status.textContent = cb.error;
+    const user = cb.signedIn ? cb.user : await C.restore();
+    paint(user);
+  } catch (e) {
+    paint(null);
+  }
+
+  btnIn.addEventListener("click", async () => {
+    status.textContent = "正在跳转登录…";
+    const r = await C.signIn();
+    if (!r.ok) status.textContent = r.error || "登录失败";
+  });
+  btnOut.addEventListener("click", async () => {
+    await C.signOut(); paint(null); status.textContent = "已退出登录，本机数据保持不变。";
+  });
+  btnUp.addEventListener("click", async () => {
+    btnUp.disabled = true; status.textContent = "正在上传学习摘要…";
+    try {
+      const report = await api("/api/report");
+      const r = await C.upload(report);
+      status.textContent = r.ok ? "已上传到云（" + new Date(r.synced_at).toLocaleString("zh-CN") + "）。" : r.error;
+    } catch (e) {
+      status.textContent = "上传失败：" + e.message;
+    } finally { btnUp.disabled = false; }
+  });
+  btnDown.addEventListener("click", async () => {
+    btnDown.disabled = true; status.textContent = "正在读取云端…";
+    try {
+      const r = await C.download();
+      if (!r.ok) { status.textContent = r.error; return; }
+      const s = r.report || {};
+      const c = Array.isArray(s.concepts) ? s.concepts : [];
+      const mastered = c.filter(x => x && x.mastered).length;
+      const stats = s.stats || {};
+      status.textContent = "云端摘要读取成功：" + c.length + " 个知识点，已掌握 " + mastered +
+        "，作答 " + (stats.attempts || stats.total || 0) + " 次。" +
+        "本机为唯一真相源，请在核对后决定如何据此继续学习（不自动覆盖本机记录）。";
+    } catch (e) {
+      status.textContent = "恢复失败：" + e.message;
+    } finally { btnDown.disabled = false; }
+  });
+}
+
 (async function init() {
   await refreshOverview();
   restoreResearchWorkspace();
+  initCloudSync();             // 云同步独立初始化，失败不影响主流程
   const preset = new URLSearchParams(location.search).get("q");
   const hash = location.hash.replace("#", "");
   if (hash && VIEWS.includes(hash)) showView(hash);

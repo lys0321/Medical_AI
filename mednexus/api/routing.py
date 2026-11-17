@@ -42,7 +42,8 @@ from api.answer import grade, answer_text
 from api.study import study_payload, import_sources, image_quiz
 from api.ask import ask, ask_compat, model_json
 from api.research import research_gate, pubmed, pubmed_compat, export_citations
-from api.drill import catalog as drill_catalog, make_task as drill_task, answer as drill_answer
+from api.drill import (catalog as drill_catalog, make_task as drill_task, answer as drill_answer,
+                       triple_catalog, triple_task, triple_answer)
 from api.report import (snapshot, report, export_learning, overview_payload,
                         reset_learning, record_study_seconds, time_stats)
 
@@ -258,6 +259,9 @@ class Handler(BaseHTTPRequestHandler):
                 if path == "/api/kaodian":
                     # 教材精练的目录：哪几本教材、每本有哪些章、每章多少条考点
                     return self.send(drill_catalog())
+                if path == "/api/kaodian/triple-catalog":
+                    # 三要点自测目录：考点原文可转成的三要点题统计
+                    return self.send(triple_catalog())
                 with LOCK, connect() as db:
                     if path == "/api/bootstrap":
                         return self.send(snapshot(db, learner))
@@ -435,6 +439,10 @@ class Handler(BaseHTTPRequestHandler):
                     out = drill_task(db, learner, body)
                 elif path == "/api/kaodian/answer":
                     out = drill_answer(db, learner, body)
+                elif path == "/api/kaodian/triple-task":
+                    out = triple_task(db, learner, body)
+                elif path == "/api/kaodian/triple-answer":
+                    out = triple_answer(db, learner, body)
                 elif path == "/api/task":
                     out = make_task(db, learner, cid, body.get("kind", "auto"))
                 elif path == "/api/answer":

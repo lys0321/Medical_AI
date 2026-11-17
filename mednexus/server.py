@@ -41,7 +41,8 @@ from api.ask import (model_json, ask, ask_compat, _textbook_key_points)
 from api.research import (research_gate, ncbi_get, ncbi_get_url, windows_https_get, xmltext, pubmed, cached_paper, fetch_fulltext, export_citations, _check_research_privacy, research_query_for, research_request, pubmed_compat)
 from api.report import (snapshot, report, export_learning, reset_learning, _book_stats, _recent, _weak, overview_payload,
                         record_study_seconds, time_stats, unit_stats)
-from api.drill import catalog as drill_catalog, make_task as drill_task, answer as drill_answer
+from api.drill import (catalog as drill_catalog, make_task as drill_task, answer as drill_answer,
+                       triple_catalog, triple_task, triple_answer)
 from api.routing import Handler, main, ThreadingHTTPServer
 import api.task as _task
 import api.answer as _answer
