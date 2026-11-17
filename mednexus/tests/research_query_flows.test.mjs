@@ -21,7 +21,7 @@ function setup(api=async()=>({})){
   const nodes={},calls=[];const ctx=vm.createContext({el:(...args)=>new Node(...args),$:id=>nodes[id]??=new Node(),
     api:async(...args)=>{calls.push(args);return api(...args);},pmRequestId:0,readingRequestId:0,
     researchContext:null,wanderOriginConcept:null,overviewData:null,toast(){},renderPapers(){}});
-  vm.runInContext(code,ctx);vm.runInContext(slice('function resetResearchContext()', 'async function loadPaperReading'),ctx);
+  vm.runInContext(code,ctx);vm.runInContext(slice('function researchSourceLabel', 'async function loadPaperReading'),ctx);
   vm.runInContext(slice('$("pmForm").addEventListener', '$$(".pm-chip")'),ctx);
   return {ctx,nodes,calls};
 }
@@ -105,4 +105,35 @@ test('scope buttons rewrite only the draft query, refresh its status and never c
   assert.equal(s.nodes.pmQuery.value,'oculomotor[MeSH]');
   assert.match(s.nodes.pmStatus.textContent,/已去掉检索限定/);
   assert.equal(s.calls.length,0);
+});
+
+test('ineligible gate offers a way out: independent search and a suggested rephrase, without looping',async()=>{
+  const s=setup(async(path,body)=>path==='/api/research'
+    ? {eligible:false,reason:'更像概念问题',suggestion:'不同病因的麻痹瞳孔受累是否有差异？',query:'',query_plan:null}
+    : {note:body.query||'pupil',papers:[{pmid:'1'}],count:1});
+  s.ctx.$('pmQ').value='动眼神经是什么？';
+  await s.ctx.pmSearch(s.nodes.pmQ.value,'oculomotor');
+  assert.equal(s.calls.length,1);
+  // 关键：不能只留一句“先补学”，必须给出可操作的出路。
+  const out=button(s.nodes.pmStatus,'按通用医学主题检索');
+  assert.ok(out,'ineligible gate must expose an independent-search escape hatch');
+  assert.match(text(s.nodes.pmStatus),/不同病因的麻痹瞳孔受累是否有差异/);
+  assert.equal(s.nodes.researchQueryEditor.hidden,true);
+  out.listeners.click();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(s.calls.length,2);
+  assert.equal(s.calls[1][0],'/api/pubmed');
+  assert.equal(s.calls[1][1].concept,undefined,'independent search must not carry the stale concept');
+});
+
+test('research source label uses real course/unit/name and never hardcodes a nerve',()=>{
+  const s=setup();
+  s.ctx.overviewData={course:{name:'系统解剖学'},concepts:[
+    {id:'oculomotor',name:'动眼神经的功能与损伤',unit:'眼球运动与瞳孔'},
+    {id:'corneal',name:'角膜反射',unit:'脑神经'}]};
+  assert.equal(s.ctx.researchSourceLabel('oculomotor'),'来自：系统解剖学 / 眼球运动与瞳孔 / 动眼神经的功能与损伤');
+  //  corneal 才属于脑神经；用一个不同 unit 的知识点确保不会串台写死。
+  assert.equal(s.ctx.researchSourceLabel('corneal'),'来自：系统解剖学 / 脑神经 / 角膜反射');
+  // 元数据缺失时优雅降级，不留空白标签。
+  s.ctx.overviewData=null;
+  assert.equal(s.ctx.researchSourceLabel('oculomotor'),'来自：当前课程 / oculomotor');
 });

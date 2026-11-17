@@ -41,7 +41,6 @@ import histology_quiz
 import vision
 
 from api.core import InputError, connect, event
-from api.core import InputError, connect, event
 
 def research_gate(c, question, force=False):
     if not isinstance(question, str) or len(question.strip()) > 300:

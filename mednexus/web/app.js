@@ -801,6 +801,15 @@ async function ask(question, originConcept = null) {
 }
 
 /* ---------- 科研探索 ---------- */
+/* 漫游来源标签：用真实课程/知识点元数据，缺失时优雅降级，不再写死“脑神经”。 */
+function researchSourceLabel(conceptId) {
+  const concepts = Array.isArray(overviewData?.concepts) ? overviewData.concepts : [];
+  const c = concepts.find((item) => item.id === conceptId);
+  const courseName = overviewData?.course?.name;
+  const parts = [courseName || "当前课程", c?.unit, c?.name || conceptId].filter(Boolean);
+  return "来自：" + parts.join(" / ");
+}
+
 function resetResearchContext() {
   wanderOriginConcept = null; researchContext = null;
   pmRequestId++; readingRequestId++;
@@ -836,8 +845,7 @@ function restoreResearchWorkspace() {
     $("researchQueryPlan").textContent = '已恢复编辑草稿；词语对照未恢复，可重新判断疑问取得建议。';
   }
   if (draft.concept) {
-    const name = overviewData.concepts.find(c => c.id === draft.concept).name;
-    $("researchContextLabel").textContent = "来自：系统解剖学 / 脑神经 / " + name;
+    $("researchContextLabel").textContent = researchSourceLabel(draft.concept);
   }
   $("pmStatus").textContent = "已恢复本窗口的疑问与检索式草稿。文献结果未自动重查，请确认内容后主动检索。";
 }
@@ -849,8 +857,7 @@ function openResearch(question, concept = null) {
   $("pmQ").value = question;
   showView("research"); $("pmQ").focus();
   if (concept) {
-    const name = overviewData?.concepts?.find((c) => c.id === concept)?.name || concept;
-    $("researchContextLabel").textContent = "来自：系统解剖学 / 脑神经 / " + name;
+    $("researchContextLabel").textContent = researchSourceLabel(concept);
     $("researchReturn").hidden = false;
     $("pmStatus").textContent = "请写下这个知识点的具体机制、差异或证据疑问。先判断问题并确认英文检索式，再查询文献。";
   }
@@ -883,6 +890,21 @@ async function pmSearch(q, originConcept = null, editedQuery = null) {
           if ($("pmQ").value.trim() !== query || wanderOriginConcept !== originConcept) return;
           $("pmQuery").value = value; researchQueryChanged();
         });
+      } else {
+        // 这个疑问没通过“知识点研究性”判断。若仍困在 gate 分支里重复提交，
+        // 用户将永远拿不到文献列表。给出两条明确出路：改成研究性问法，或
+        // 直接按通用医学主题检索（脱离当前知识点，走 research_query_for 模板）。
+        if (gate.suggestion) {
+          const hint = el("span", "study-source", "可改成这样再判断：" + gate.suggestion);
+          $("pmStatus").appendChild(hint);
+        }
+        const escape = el("button", "btn", "按通用医学主题检索");
+        escape.type = "button";
+        escape.addEventListener("click", () => {
+          if (request !== pmRequestId) return;
+          pmSearch(query, null);
+        });
+        $("pmStatus").appendChild(escape);
       }
       rememberResearchWorkspace();
       return;

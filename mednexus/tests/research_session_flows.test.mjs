@@ -9,9 +9,14 @@ const slice=(a,b)=>app.slice(app.indexOf(a),app.indexOf(b));
 const identity='a'.repeat(48);
 function setup(overrides={}) {
   const values=new Map(),nodes={};
+  const overview={concepts:[{id:'light',name:'瞳孔反射'}]};
   const storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};
-  const ctx=vm.createContext({sessionStorage:storage,learnerId:()=>identity,overviewData:{concepts:[{id:'light',name:'瞳孔反射'}]},
+  const ctx=vm.createContext({sessionStorage:storage,learnerId:()=>identity,overviewData:overview,
     wanderOriginConcept:null,researchContext:null,pmRequestId:0,readingRequestId:0,
+    researchSourceLabel:id=>{
+      const c=(overrides.overviewData?.concepts||overview.concepts).find(x=>x.id===id);
+      return '来自：测试课程 / '+(c?.name||id||'通用');
+    },
     $:id=>nodes[id]??={value:'',textContent:'',innerHTML:'',hidden:true},...overrides});
   vm.runInContext(source,ctx);vm.runInContext(slice('function resetResearchContext()', 'function openResearch('),ctx);
   return {ctx,values,nodes,storage};
