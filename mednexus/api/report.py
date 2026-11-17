@@ -36,6 +36,7 @@ import tutor_model
 import text_grading
 import citations
 import evidence
+import galaxy
 import pmc
 import histology_quiz
 import vision
@@ -294,6 +295,8 @@ def overview_payload(db, learner):
         "recommendation": snap["recommendation"],
         "stats": snap["stats"],
         "units": unit_stats(snap["concepts"]),
+        "galaxy": galaxy.build_galaxy(snap["concepts"], snap["stats"],
+                                      _weak(db, learner)),
         "learning_time": time_stats(db, learner),
         "learning_plan": plan,
         "image_quiz": image_stats(db, learner),

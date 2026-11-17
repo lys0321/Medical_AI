@@ -1004,6 +1004,16 @@ async function refreshOverview() {
   try {
     overviewData = await api("/api/overview");
     renderRecent(overviewData.recent || []);
+    if (typeof renderGalaxy === "function") {
+      const mount = $("galaxyMount");
+      if (mount) renderGalaxy(mount, overviewData.galaxy, {
+        onOpen: (cid) => {
+          if (!cid) return;
+          showView("quiz", { restoreTask: false });
+          loadTask(cid, "auto");
+        }
+      });
+    }
     renderChecklist(overviewData);
     renderLearningPlan(overviewData.learning_plan);
     if (document.querySelector("#view-learn.is-active")) renderLearn(overviewData);
