@@ -120,7 +120,10 @@ def pubmed(query, sort="relevance"):
     with connect() as db:
         row = db.execute("SELECT payload,created FROM cache WHERE key=?", (key,)).fetchone()
     if row and time.time() - row["created"] < 86400:
-        return {**json.loads(row["payload"]), "cached": True}
+        payload = json.loads(row["payload"])
+        if "evidence_mix" not in payload:
+            payload["evidence_mix"] = evidence.evidence_mix(payload.get("papers", []))
+        return {**payload, "cached": True}
     result = json.loads(ncbi_get("esearch.fcgi", {"db": "pubmed", "term": query, "retmode": "json", "retmax": 20, "sort": sort}))
     search = result.get("esearchresult", {})
     if "ERROR" in result or search.get("errorlist"):
@@ -146,7 +149,7 @@ def pubmed(query, sort="relevance"):
             papers.append({"pmid": pmid, "title": xmltext(article.find("ArticleTitle")), "journal": xmltext(article.find("Journal/Title")), "year": year, "authors": authors[:8], "types": types, "evidence": label, "abstract": abstract, "url": "https://pubmed.ncbi.nlm.nih.gov/" + pmid + "/", "doi": "https://doi.org/" + urllib.parse.quote(doi, safe="/") if doi else ""})
             if len(papers) >= 5:
                 break
-    out = {"schema_version": 2, "papers": papers, "count": int(search.get("count", 0)), "translation": search.get("querytranslation", query), "query": query, "cached": False, "fetched_at": time.time()}
+    out = {"schema_version": 2, "papers": papers, "count": int(search.get("count", 0)), "translation": search.get("querytranslation", query), "query": query, "cached": False, "fetched_at": time.time(), "evidence_mix": evidence.evidence_mix(papers)}
     with connect() as db:
         db.execute("INSERT OR REPLACE INTO cache VALUES(?,?,?)", (key, json.dumps(out, ensure_ascii=False), time.time()))
     return out
@@ -290,7 +293,8 @@ def pubmed_compat(db, learner, body, request=None):
     event(db, learner, "literature", request["concept"], {"question": request["question"], "query": request["query"],
           "pmids": [p["pmid"] for p in out["papers"]]})
     return {**request, "papers": out["papers"], "note": request["query"],
-            "count": out["count"], "fetched_at": out["fetched_at"], "cached": out["cached"]}
+            "count": out["count"], "fetched_at": out["fetched_at"], "cached": out["cached"],
+            "evidence_mix": out.get("evidence_mix")}
 
 # ---- 研究域自有的连接状态（不放在 core：只有这里用）----
 NCBI_LOCK = threading.Lock()

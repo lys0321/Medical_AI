@@ -303,6 +303,31 @@ svg { width: 1.2em; height: 1.2em; fill: none; stroke: currentColor; stroke-widt
 .paper a { color: var(--blue-deep); font-size: 11.5px; text-decoration: none; }
 .paper a:hover { text-decoration: underline; }
 
+/* 证据类型构成画像：只描述 PubMed 官方文献类型的分布，不是质量评级。 */
+.evidence-mix {
+  padding: 13px 15px; border-radius: var(--radius);
+  background: var(--surface-2); border: 1px solid var(--line-2);
+}
+.evidence-mix-title { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+.evidence-mix-summary { margin: 5px 0 9px; font-size: 12px; color: var(--ink-2); line-height: 1.6; }
+.evidence-bar {
+  display: flex; width: 100%; height: 10px; border-radius: 999px;
+  overflow: hidden; background: var(--line); gap: 2px;
+}
+.evidence-seg { display: block; height: 100%; min-width: 2px; }
+.evidence-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 8px; }
+.evidence-legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--ink-2); }
+.legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 3px; flex: none; }
+.evidence-mix-notice { margin: 4px 0 0; font-size: 11px; color: var(--muted); line-height: 1.6; }
+/* 证据层级配色：由强到弱用冷→暖色，纯视觉区分，不含质量高低含义。 */
+.mix-guideline { background: #2856d8; }
+.mix-meta { background: #2f9e6f; }
+.mix-rct { background: #3b9fd6; }
+.mix-observational { background: #7a86d8; }
+.mix-review { background: #b08bd6; }
+.mix-case { background: #e59a3c; }
+.mix-other { background: #aab6c9; }
+
 /* ---------- 快速开始 ---------- */
 .section-title { font-size: 17px; font-weight: 650; margin: 26px 0 14px; }
 .section-head { display: flex; align-items: baseline; justify-content: space-between; }

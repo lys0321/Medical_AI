@@ -80,6 +80,72 @@ def _mention(text, pattern, positive, negative):
     return {'status': 'not_reported', 'value': '', 'source': '摘要原文', 'quote': '', 'note': negative}
 
 
+# 文献类型构成画像：只统计 PubMed 官方 PublicationType 的分布，不评分、不推断设计。
+# 每项 (key, 中文标签, 官方类型集合)；顺序即归类优先级，一篇文献只落入最高命中的一类。
+STUDY_MIX = (
+    ('guideline', '指南/共识', ('Guideline', 'Practice Guideline', 'Consensus Development Conference')),
+    ('meta', '系统综述/Meta', ('Meta-Analysis', 'Systematic Review')),
+    ('rct', '随机对照试验', ('Randomized Controlled Trial',)),
+    ('observational', '观察性研究', ('Observational Study', 'Cohort Studies', 'Case-Control Studies')),
+    ('review', '综述', ('Review',)),
+    ('case', '病例报告', ('Case Reports',)),
+    ('other', '其他/待核对', ()),  # 兜底：类型未映射
+)
+MIX_NOTICE = ('以上只是按 PubMed 官方文献类型（Publication Type）统计的类型构成，'
+              '用于提示这批检索结果包含哪些研究设计类型；它不是证据质量评级，'
+              '文献类型不能判定证据质量，也不能替代偏倚风险评估，请打开原文核对研究设计与结论。')
+
+
+def evidence_mix(papers):
+    """统计一批 PubMed 文献的类型构成，只描述分布、不给质量结论。
+
+    ``papers`` 是 ``pubmed()`` 返回的论文列表。只读取每篇的 ``types``
+    （PubMed 官方 PublicationType），按 ``STUDY_MIX`` 优先级把每篇归入且仅归入一类。
+    不做任何医学推断，不修改入参；返回可核验的计数、占比与中性提示。
+    """
+    if not isinstance(papers, list):
+        papers = []
+    counts = {key: 0 for key, _, _ in STUDY_MIX}
+    for item in papers:
+        if not isinstance(item, dict):
+            counts['other'] += 1
+            continue
+        types = item.get('types', [])
+        if isinstance(types, str):
+            types = [types]
+        if not isinstance(types, list):
+            types = []
+        normalized = {t.strip() for t in types if isinstance(t, str)}
+        for key, _, official in STUDY_MIX:
+            if key == 'other':
+                counts['other'] += 1
+                break
+            if normalized.intersection(official):
+                counts[key] += 1
+                break
+    total = len(papers)
+    buckets = []
+    for key, label, _ in STUDY_MIX:
+        count = counts[key]
+        if not count:
+            continue
+        percent = int(round(count * 100.0 / total)) if total else 0
+        buckets.append({'key': key, 'label': label, 'count': count, 'percent': percent})
+    if total:
+        parts = ['%s %d 篇' % (b['label'], b['count']) for b in buckets]
+        summary = '本次检索 %d 篇：%s。' % (total, '、'.join(parts))
+    else:
+        summary = '本次没有文献可统计。'
+    return {
+        'total': total,
+        'buckets': buckets,
+        'summary': summary,
+        'notice': MIX_NOTICE,
+        'has_primary': any(counts[k] for k in ('rct', 'observational', 'case')),
+        'has_synthesis': any(counts[k] for k in ('guideline', 'meta', 'review')),
+    }
+
+
 def assess(paper):
     """返回四项可核验字段 + 中性提示。``paper`` 是 PubMed 检索缓存里的原始记录。"""
     if not isinstance(paper, dict):

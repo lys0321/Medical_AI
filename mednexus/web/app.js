@@ -713,12 +713,45 @@ function paperCard(p) {
   return card;
 }
 
-function renderPapers(container, papers, note, tagEl) {
+// 证据类型构成画像：按 PubMed 官方文献类型统计的分布条。只描述分布、不评分，
+// 强调"不是质量评级"，与 evidence.evidence_mix() 的后端契约保持一致。
+function evidenceMixBar(mix) {
+  if (!mix || !mix.total || !mix.buckets || !mix.buckets.length) return null;
+  const box = el("div", "evidence-mix");
+  const title = el("div", "evidence-mix-title", "证据类型构成");
+  box.appendChild(title);
+  box.appendChild(el("p", "evidence-mix-summary", mix.summary || ""));
+  const bar = el("div", "evidence-bar");
+  bar.setAttribute("role", "img");
+  bar.setAttribute("aria-label", mix.summary || "证据类型构成");
+  mix.buckets.forEach((b) => {
+    const seg = el("span", "evidence-seg mix-" + (b.key || "other"));
+    seg.style.width = (b.percent || 0) + "%";
+    seg.title = b.label + " " + b.count + " 篇（" + (b.percent || 0) + "%）";
+    bar.appendChild(seg);
+  });
+  box.appendChild(bar);
+  const legend = el("div", "evidence-legend");
+  mix.buckets.forEach((b) => {
+    const item = el("span", "evidence-legend-item");
+    const dot = el("i", "legend-dot mix-" + (b.key || "other"));
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(b.label + " " + b.count));
+    legend.appendChild(item);
+  });
+  box.appendChild(legend);
+  box.appendChild(el("p", "evidence-mix-notice", mix.notice || ""));
+  return box;
+}
+
+function renderPapers(container, papers, note, tagEl, evidenceMix) {
   container.innerHTML = "";
   if (tagEl) {
     tagEl.textContent = note ? String(note).replace(/^cache:/, "") : "";
     tagEl.title = tagEl.textContent;
   }
+  const mixBar = evidenceMixBar(evidenceMix);
+  if (mixBar) container.appendChild(mixBar);
   if (!papers || !papers.length) {
     const empty = el("div", "paper");
     empty.appendChild(el("p", null, note || "未获取文献"));
@@ -917,7 +950,7 @@ async function pmSearch(q, originConcept = null, editedQuery = null) {
       ? (data.mapping || "") + "\n检索式：" + data.note +
         "\nPubMed 共 " + data.count + " 条匹配；下方按发表日期显示本次获取的文献。摘要为原文节选，具体结论请打开原文核对。"
       : "";
-    renderPapers($("pmResults"), data.papers, data.note);
+    renderPapers($("pmResults"), data.papers, data.note, null, data.evidence_mix);
     if (originConcept) { $("pmQuery").value = data.note; $("researchQueryEditor").hidden = false; }
     if (typeof updateResearchQueryPlan === 'function') updateResearchQueryPlan($("researchQueryPlan"), $("pmQuery").value);
     rememberResearchWorkspace();
