@@ -22,6 +22,8 @@ FALLBACK = {
 
 NO_PAGE = ('这三本教材（局部解剖学 / 生理学 / 生物化学）没有直接讲到“%s”这一处；'
            '本题的判断依据来自公开神经科资料，可在“文献漫游”里查原始出处。')
+NO_PAGE_STEP2 = ('本地教材索引里暂时没有“%s”这一处的页码。先按结构或通路 → 功能 → 表现的顺序'
+                 '自己把依据说一遍，再到“文献漫游”核对公开资料；教材页码可在导入扫描件后补充。')
 NO_MORE = ('教材里与“%s”直接相关的就上面这些页了；再看下去要看机制或病理生理，'
            '建议回看知识卡，或直接在“我的学习”里提问。')
 
@@ -48,7 +50,9 @@ def page_hint_text(concept, question, index, level, lookup):
     """
     hits = lookup(concept, question, index) or []
     if not hits:
-        return NO_PAGE % concept['name']
+        # 没有教材索引时两级提示也要给出不同、且诚实的话术：
+        # 第一级说明没有页码，第二级给出可操作的复习路径，避免两步一模一样。
+        return (NO_PAGE if level == 1 else NO_PAGE_STEP2) % concept['name']
     if level > len(hits):
         return NO_MORE % concept['name']
     hit = hits[level - 1]

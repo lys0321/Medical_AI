@@ -24,6 +24,7 @@ function setup(flags={}) {
   const data={stats:{},concepts:[{id:'oculomotor',name:'动眼神经'},{id:'light',name:'瞳孔反射'}]};
   const ctx=vm.createContext({quizConcept:'oculomotor',quizTask:{token:'old'},quizPhase:'task',
     quizLoading:false,quizSubmitting:false,quizHintLoading:false,overviewData:data,...flags,
+    quizUnit:null,PAGE_BUILD:'test',renderQuizAsk:()=>{},quizToolbar:()=>new Node(),
     $:id=>nodes[id],$$:(_,root)=>root.children.filter(node=>node.tag==='button'),
     el:(...args)=>new Node(...args),toast:message=>toasts.push(message),
     api:(path,body)=>{calls.push([path,body]);return response;},

@@ -68,6 +68,7 @@ function setup({store=storage(),api=async()=>({})}={}) {
     el:(tag,cls,value)=>new Node(tag,cls,value),$:id=>nodes[id]??=new Node(),
     $$:(selector,root)=>all(root).filter(n=>n.className.split(' ').includes(selector.slice(1))),
     quizTask:t,quizPhase:'task',quizSubmitting:false,quizLoading:false,quizHintLoading:false,
+    quizUnit:null,PAGE_BUILD:'test',quizToolbar:()=>new Node(),renderQuizAsk:()=>{},
     toast:msg=>messages.push(msg),mountTutorChat:()=>{},requestTaskHint:()=>{},
     api:async(...args)=>{calls.push(args);return api(...args);},renderQuizResult:r=>{ctx.rendered=r;},refreshOverview:async()=>{},loadLearningReport:async()=>{}});
   vm.runInContext(draftSource,ctx);
