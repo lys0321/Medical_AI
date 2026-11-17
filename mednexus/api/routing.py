@@ -47,6 +47,45 @@ from api.drill import (catalog as drill_catalog, make_task as drill_task, answer
 from api.report import (snapshot, report, export_learning, overview_payload,
                         reset_learning, record_study_seconds, time_stats)
 
+
+def public_deploy():
+    """是否运行在云端托管模式。
+
+    本地开发/测试不设置该环境变量，所有行为与从前完全一致（只接受本机与
+    内网 IP、CSP 仅允许 self）。只有发布平台显式置位才进入公开模式。
+    """
+    return os.environ.get("MEDNEXUS_PUBLIC") == "1"
+
+
+def cloud_connect_origins():
+    """从公开配置读取云服务端点，供托管模式 CSP 放行，避免硬编码域名。"""
+    origins = []
+    try:
+        text = (ROOT / "web" / "cloud-config.js").read_text(encoding="utf-8")
+    except OSError:
+        return origins
+    for url in re.findall(r"https://[^\s'\"]+", text):
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme == "https" and parsed.netloc:
+            origin = "https://" + parsed.netloc
+            if origin not in origins:
+                origins.append(origin)
+    return origins
+
+
+def content_security_policy():
+    """托管模式放行云 SDK 的 CDN 与云服务端点；本机模式保持严格 self。"""
+    if not public_deploy():
+        return ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data:; connect-src 'self'; object-src 'none'; "
+                "base-uri 'none'; frame-ancestors 'none'")
+    script = "'self' https://cdn.jsdelivr.net"
+    connect = " ".join(["'self'"] + cloud_connect_origins())
+    return ("default-src 'self'; script-src %s; style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; connect-src %s; object-src 'none'; "
+            "base-uri 'none'; frame-ancestors 'none'" % (script, connect))
+
+
 def start_request(handler):
     """给请求分配 request_id 与计时起点。
 
@@ -94,7 +133,14 @@ class Handler(BaseHTTPRequestHandler):
             self.close_connection = True
 
     def allowed(self):
-        """同源校验：默认只允许本机；绑定 0.0.0.0 时额外允许内网 IP，便于局域网演示。"""
+        """同源校验：默认只允许本机；绑定 0.0.0.0 时额外允许内网 IP，便于局域网演示。
+
+        托管模式（MEDNEXUS_PUBLIC=1）下放行任意来源：应用经反向代理以独立域名
+        对外提供，浏览器同源请求携带的 Host/Origin 不可能是本机地址；此时由平台
+        的域名隔离承担边界，应用层不再二次拒绝，否则所有 API 都会被 403。
+        """
+        if public_deploy():
+            return True
         port = self.server.server_port
         host = self.headers.get("Host", "").lower()
         origin = self.headers.get("Origin")
@@ -285,7 +331,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", mimetypes.guess_type(target)[0] or "application/octet-stream")
         self.send_header("Content-Length", str(len(raw)))
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
+        self.send_header("Content-Security-Policy", content_security_policy())
         self.end_headers()
         self.wfile.write(raw)
 
@@ -475,11 +521,16 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description="Run MedNexus locally or on a LAN")
-    parser.add_argument("port", type=int, nargs="?", default=7860)
+    # 发布平台通过 PORT 环境变量注入端口；未设置时保持原来的 7860 默认值。
+    default_port = int(os.environ.get("PORT") or 7860)
+    parser.add_argument("port", type=int, nargs="?", default=default_port)
     parser.add_argument("--open", action="store_true")
     parser.add_argument("--host", default="127.0.0.1",
                         help="监听地址；填 0.0.0.0 允许同内网其他设备访问（默认仅本机）")
     args = parser.parse_args()
+    if public_deploy():
+        # 托管模式必须监听所有网卡，反向代理才能把公网请求转进来。
+        args.host = "0.0.0.0"
     init_db()
     try:
         server = ThreadingHTTPServer((args.host, args.port), Handler)
