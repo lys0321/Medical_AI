@@ -930,13 +930,14 @@ async function pmSearch(q, originConcept = null, editedQuery = null) {
     $("pmStatus").textContent = "检索失败：" + e.message;
     if (originConcept && editedQuery !== null) $("researchQueryEditor").hidden = false;
     rememberResearchWorkspace();
-    if (e.url) {
-      const a = el("a", null, "在 PubMed 打开检索式 ↗");
-      a.href = e.url;
-      a.target = "_blank";
-      a.rel = "noopener";
-      $("pmStatus").appendChild(a);
-    }
+    // 检索失败也要留一条可点的出路：后端给了检索式就用它，否则用原问题
+    // 直接构造 PubMed 搜索链接，避免用户看到“检索失败”后无路可走。
+    const fallbackUrl = "https://pubmed.ncbi.nlm.nih.gov/?term=" + encodeURIComponent(query);
+    const a = el("a", null, e.url ? "在 PubMed 打开检索式 ↗" : "在 PubMed 搜索这个问题 ↗");
+    a.href = e.url || fallbackUrl;
+    a.target = "_blank";
+    a.rel = "noopener";
+    $("pmStatus").appendChild(a);
   }
 }
 

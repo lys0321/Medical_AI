@@ -137,3 +137,24 @@ test('research source label uses real course/unit/name and never hardcodes a ner
   s.ctx.overviewData=null;
   assert.equal(s.ctx.researchSourceLabel('oculomotor'),'来自：当前课程 / oculomotor');
 });
+
+test('a failed search still leaves a clickable PubMed escape even when the error has no url',async()=>{
+  const s=setup(async()=>{ throw new Error('目前没有这个中文主题的英文检索模板'); });
+  const q='间脑的功能是什么';
+  await s.ctx.pmSearch(q, null);
+  const link=all(s.nodes.pmStatus).find(n=>n.tag==='a');
+  assert.ok(link,'failed search must always offer a PubMed link');
+  assert.equal(link.href,'https://pubmed.ncbi.nlm.nih.gov/?term='+encodeURIComponent(q));
+  assert.match(link.textContent,/搜索这个问题/);
+  assert.match(text(s.nodes.pmStatus),/检索失败/);
+});
+
+test('when the error carries a url, prefer it over the question fallback',async()=>{
+  const wanted='https://pubmed.ncbi.nlm.nih.gov/?term=oculomotor+AND+pupil';
+  const s=setup(async()=>{ const e=new Error('PubMed 当前连接失败'); e.url=wanted; throw e; });
+  await s.ctx.pmSearch('动眼神经瞳孔', null);
+  const link=all(s.nodes.pmStatus).find(n=>n.tag==='a');
+  assert.ok(link);
+  assert.equal(link.href,wanted);
+  assert.match(link.textContent,/打开检索式/);
+});
