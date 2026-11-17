@@ -2137,7 +2137,7 @@ function applyQuizMode() {
   });
 })();
 
-/* ---------- 教材精练：按教材章节出原文题 ---------- */
+/* ---------- 教材精练：按教材章节出原文题（单选速练 / 三要点自测） ---------- */
 let drillData = null;
 let drillBook = null;
 let drillChapter = null;
@@ -2146,16 +2146,32 @@ let drillResult = null;
 let drillBusy = false;
 let drillDone = 0;
 let drillRight = 0;
+let drillMode = "single";          // single | triple
+let drillModeBound = false;
+let tripleCatalog = null;          // { books: { 书名: { eligible, chapters } } }
+let tripleTask = null;
+let tripleResult = null;
+let tripleSelections = [null, null, null];
+let tripleBusy = false;
+let tripleDone = 0;
+let tripleRight = 0;
 
 async function loadDrill() {
-  if (drillData) {
+  if (drillData && tripleCatalog !== null) {
     renderDrill();
     return;
   }
   const box = $("drillBooks");
   box.textContent = "正在读取教材目录…";
   try {
-    drillData = await api("/api/kaodian");
+    // 三要点目录单独吞掉异常：它不可用只隐藏该模式，不影响原有单选速练。
+    const [single, triple] = await Promise.all([
+      drillData ? Promise.resolve(drillData) : api("/api/kaodian"),
+      tripleCatalog !== null ? Promise.resolve(tripleCatalog)
+        : api("/api/kaodian/triple-catalog").catch(() => ({ available: false, books: {} })),
+    ]);
+    drillData = single;
+    tripleCatalog = triple;
   } catch (error) {
     box.textContent = "教材目录读取失败：" + error.message;
     return;
@@ -2169,11 +2185,37 @@ async function loadDrill() {
   renderDrill();
 }
 
+function bindDrillModeSwitch() {
+  if (drillModeBound) return;
+  const box = $("drillModeSwitch");
+  if (!box) return;
+  drillModeBound = true;
+  box.addEventListener("click", (ev) => {
+    const btn = ev.target.closest("button[data-mode]");
+    if (!btn || btn.dataset.mode === drillMode) return;
+    drillMode = btn.dataset.mode;
+    // 切换模式时清掉另一种模式的中间状态，避免看到上一模式的残留题。
+    drillTask = null; drillResult = null;
+    tripleTask = null; tripleResult = null; tripleSelections = [null, null, null];
+    renderDrill();
+  });
+}
+
+function tripleEligibleNos() {
+  const stats = tripleCatalog?.books?.[drillBook];
+  return new Set((stats?.chapters || []).filter((c) => (c.eligible || 0) > 0).map((c) => c.no));
+}
+
 function drillBookEntry() {
   return (drillData?.books || []).find((b) => b.book === drillBook) || null;
 }
 
 function renderDrill() {
+  bindDrillModeSwitch();
+  const switchBox = $("drillModeSwitch");
+  if (switchBox) switchBox.querySelectorAll("button[data-mode]").forEach((b) => {
+    b.classList.toggle("is-active", b.dataset.mode === drillMode);
+  });
   const entry = drillBookEntry();
   const bookBox = $("drillBooks");
   bookBox.innerHTML = "";
@@ -2192,22 +2234,34 @@ function renderDrill() {
   });
 
   const chapters = entry ? entry.chapters : [];
-  // 一章不到 4 条考点就凑不出选项，直接不列，避免点了没题可出。
-  const usable = chapters.filter((c) => (c.count || 0) >= 4);
+  // 单选：一章不到 4 条凑不出选项；三要点：只列能转成合格三要点题的章。
+  const eligible = drillMode === "triple" ? tripleEligibleNos() : null;
+  const usable = chapters.filter((c) => drillMode === "triple"
+    ? eligible.has(c.no)
+    : (c.count || 0) >= 4);
   const skipped = chapters.length - usable.length;
+  // 切换模式后原选中章节可能不再可用，自动清空避免停在空题状态。
+  if (drillChapter != null && !usable.some((c) => c.no === drillChapter)) {
+    drillChapter = null; drillTask = null; drillResult = null;
+    tripleTask = null; tripleResult = null; tripleSelections = [null, null, null];
+  }
   const chapterBox = $("drillChapters");
   chapterBox.innerHTML = "";
   if (!entry) {
     chapterBox.appendChild(el("p", "empty-line", "暂无可用教材。"));
   } else {
     usable.forEach((c) => {
+      const stat = tripleCatalog?.books?.[drillBook]?.chapters?.find((x) => x.no === c.no);
+      const countText = drillMode === "triple"
+        ? (stat?.eligible || 0) + " 题"
+        : c.count + " 条";
       const chip = el("button", "chip" + (c.no === drillChapter ? " is-active" : ""),
-        (c.title || "第" + c.no + "章") + " · " + c.count + " 条");
+        (c.title || "第" + c.no + "章") + " · " + countText);
       chip.type = "button";
       chip.addEventListener("click", () => {
         drillChapter = c.no;
-        drillTask = null;
-        drillResult = null;
+        drillTask = null; drillResult = null;
+        tripleTask = null; tripleResult = null; tripleSelections = [null, null, null];
         renderDrill();
       });
       chapterBox.appendChild(chip);
@@ -2215,14 +2269,22 @@ function renderDrill() {
   }
 
   const chapter = usable.find((c) => c.no === drillChapter) || null;
+  const skipNote = drillMode === "triple"
+    ? "（另有 " + skipped + " 章凑不出合格三要点题）"
+    : "（另有 " + skipped + " 章考点太少，暂不出题）";
   $("drillBookHint").textContent = entry
-    ? entry.book + " · 可练 " + usable.length + " 章" + (skipped ? "（另有 " + skipped + " 章考点太少，暂不出题）" : "")
+    ? entry.book + " · 可练 " + usable.length + " 章" + (skipped ? skipNote : "")
     : "还没有选教材";
+  const chapStat = chapter && tripleCatalog?.books?.[drillBook]?.chapters?.find((x) => x.no === chapter.no);
   $("drillChapterHint").textContent = chapter
-    ? chapter.title + " · " + chapter.count + " 条考点"
+    ? chapter.title + (drillMode === "triple"
+        ? " · " + (chapStat?.eligible || 0) + " 题可自测"
+        : " · " + chapter.count + " 条考点")
     : (entry ? "还没有选章节" : "先选教材");
   $("drillChapterNote").textContent = chapter
-    ? "本章共 " + chapter.count + " 条考点；其中术语与完整解释齐全的会用来出题，其余在「速记自测」里逐条背诵。"
+    ? (drillMode === "triple"
+        ? "从本章考点原文抽出三个要点，逐点选解释；选项与答案均可回书核对，自测不计入掌握度。"
+        : "本章共 " + chapter.count + " 条考点；其中术语与完整解释齐全的会用来出题，其余在「速记自测」里逐条背诵。")
     : "选好章节后点「开始这一章」，会从本章原文里抽一条考点出题。";
 
   const sectionBox = $("drillSections");
@@ -2241,11 +2303,14 @@ function renderDrill() {
     sectionBox.appendChild(el("p", "empty-line", "先选好教材与章节。"));
   }
 
-  $("drillKind").textContent = drillDone ? "已练 " + drillDone + " 道 · 对 " + drillRight + " 道" : "尚未开始";
+  $("drillKind").textContent = drillMode === "triple"
+    ? (tripleDone ? "已自测 " + tripleDone + " 道 · 要点对 " + tripleRight + "/" + (tripleDone * 3) : "尚未开始")
+    : (drillDone ? "已练 " + drillDone + " 道 · 对 " + drillRight + " 道" : "尚未开始");
   renderDrillArea(chapter);
 }
 
 function renderDrillArea(chapter) {
+  if (drillMode === "triple") { renderTripleArea(chapter); return; }
   const box = $("drillArea");
   box.innerHTML = "";
   if (!chapter) {
@@ -2334,6 +2399,113 @@ async function answerDrill(choice) {
   } finally {
     drillBusy = false;
     renderDrillArea(drillBookEntry()?.chapters.find((c) => c.no === drillChapter) || null);
+  }
+}
+
+/* ---- 三要点原文自测：逐点选解释，对照原文；不计入掌握度 ---- */
+function renderTripleArea(chapter) {
+  const box = $("drillArea");
+  box.innerHTML = "";
+  if (!chapter) {
+    box.appendChild(el("p", "empty-line", "先在上面选教材与章节，再开始三要点自测。"));
+    return;
+  }
+  if (tripleResult) { renderTripleResult(box); return; }
+  if (!tripleTask) {
+    const start = el("button", "btn btn-primary", "开始三要点自测");
+    start.type = "button";
+    start.addEventListener("click", () => startTriple());
+    box.appendChild(el("p", "study-source",
+      "把一条考点原文拆成三个要点，逐点选出正确解释。所有选项都来自原文，可回书核对；自测成绩不计入掌握度。"));
+    box.appendChild(start);
+    return;
+  }
+  box.appendChild(el("p", "study-source",
+    "第 " + tripleTask.chapter + " 章 · 请为下面每个要点各选一个解释"));
+  box.appendChild(el("p", "drill-prompt", tripleTask.prompt));
+  tripleTask.points.forEach((point, idx) => {
+    box.appendChild(el("p", "triple-point-label", "要点 " + (idx + 1) + "：" + point.label));
+    const opts = el("div", "drill-options");
+    (tripleTask.options[idx] || []).forEach((option) => {
+      const btn = el("button", "drill-option" + (tripleSelections[idx] === option ? " is-active" : ""), option);
+      btn.type = "button";
+      btn.addEventListener("click", () => {
+        tripleSelections[idx] = option;
+        renderTripleArea(chapter);
+      });
+      opts.appendChild(btn);
+    });
+    box.appendChild(opts);
+  });
+  const submit = el("button", "btn btn-primary", "提交自测");
+  submit.type = "button";
+  submit.disabled = tripleBusy || tripleSelections.some((s) => !s);
+  submit.addEventListener("click", () => answerTriple());
+  box.appendChild(submit);
+  const skip = el("button", "btn", "换一道");
+  skip.type = "button";
+  skip.addEventListener("click", () => startTriple());
+  box.appendChild(skip);
+}
+
+function renderTripleResult(box) {
+  const result = tripleResult;
+  const card = el("div", "drill-result" + (result.score === 100 ? " is-right" : " is-wrong"));
+  card.appendChild(el("p", "drill-verdict",
+    "自测 " + result.score + " 分 · 答对 " + result.correct + "/3 要点"));
+  (result.rubric || []).forEach((row, idx) => {
+    card.appendChild(el("p", "triple-point-label", "要点 " + (idx + 1) + "：" + row.label));
+    card.appendChild(el("p", "drill-option" + (row.correct ? " is-correct" : " is-wrong"),
+      (row.correct ? "✓ " : "✗ ") + row.selected));
+    if (!row.correct) {
+      card.appendChild(el("p", "study-source", "原文应为：" + row.expected + (row.reason ? " · " + row.reason : "")));
+    }
+  });
+  const source = result.source || {};
+  card.appendChild(el("p", "drill-source",
+    "原文出处：第 " + result.chapter + " 章" + (source.term ? " · " + source.term : "")
+    + (source.explanation ? " —— " + source.explanation : "")));
+  card.appendChild(el("p", "study-source", result.notice));
+  const again = el("button", "btn btn-primary", "再来一道");
+  again.type = "button";
+  again.addEventListener("click", () => startTriple());
+  card.appendChild(again);
+  box.appendChild(card);
+}
+
+async function startTriple() {
+  if (tripleBusy || !drillBook || drillChapter == null) return;
+  tripleBusy = true;
+  tripleResult = null;
+  tripleSelections = [null, null, null];
+  $("drillArea").textContent = "正在从这一章的原文里抽题…";
+  try {
+    tripleTask = await api("/api/kaodian/triple-task", { book: drillBook, chapter: drillChapter });
+  } catch (error) {
+    tripleBusy = false;
+    $("drillArea").textContent = "抽题失败：" + error.message;
+    return;
+  }
+  tripleBusy = false;
+  renderTripleArea(drillBookEntry()?.chapters.find((c) => c.no === drillChapter) || null);
+}
+
+async function answerTriple() {
+  if (tripleBusy || !tripleTask) return;
+  if (tripleSelections.some((s) => !s)) { toast("请先为三个要点各选一个解释"); return; }
+  tripleBusy = true;
+  try {
+    tripleResult = await api("/api/kaodian/triple-answer", { token: tripleTask.token, answers: tripleSelections });
+    tripleTask = null;
+    tripleDone += 1;
+    tripleRight += tripleResult.correct || 0;
+    $("drillKind").textContent = "已自测 " + tripleDone + " 道 · 要点对 "
+      + tripleRight + "/" + (tripleDone * 3);
+  } catch (error) {
+    toast("判分失败：" + error.message);
+  } finally {
+    tripleBusy = false;
+    renderTripleArea(drillBookEntry()?.chapters.find((c) => c.no === drillChapter) || null);
   }
 }
 
