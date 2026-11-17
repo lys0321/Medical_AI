@@ -892,3 +892,6 @@ svg { width: 1.2em; height: 1.2em; fill: none; stroke: currentColor; stroke-widt
 .drill-mode-switch .chip[hidden] { display: none; }
 .triple-point-label { margin: 12px 0 6px; font-size: 13.5px; font-weight: 600; color: var(--ink-1, #1b2541); }
 .drill-option.is-active { outline: 2px solid #6b8afd; }
+
+/* 闭环编排生成的今日计划补救项 */
+.learning-plan-item.is-remediation { background: linear-gradient(120deg, #fff6ea, #fff); border-color: #f0d6ad; }

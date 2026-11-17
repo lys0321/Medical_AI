@@ -258,11 +258,15 @@ function renderLearningPlan(plan, errorMessage = "") {
   const more = items.length > 2 ? el("details", "learning-plan-more") : null;
   if (more) more.appendChild(el("summary", null, "还有 " + (items.length - 2) + " 项学习建议"));
   items.forEach((item, index) => {
-    const row = el("article", "learning-plan-item" + (index === 0 ? " is-next" : ""));
+    const orchestrated = item.origin === "orchestration";
+    const row = el("article", "learning-plan-item" + (index === 0 ? " is-next" : "")
+      + (orchestrated ? " is-remediation" : ""));
     const content = el("div", "learning-plan-content");
     const nameRow = el("div", "learning-plan-name");
-    const label = item.action === "resume" ? "继续未完成" : item.action === "review" ? "复习巩固" : "新知识";
-    nameRow.append(el("span", "pill", label), el("h3", null, item.name || item.concept));
+    const label = orchestrated ? "诊断后补救"
+      : item.action === "resume" ? "继续未完成" : item.action === "review" ? "复习巩固" : "新知识";
+    nameRow.append(el("span", "pill" + (orchestrated ? " warn" : ""), label),
+      el("h3", null, item.name || item.concept));
     content.append(nameRow, el("p", "learning-plan-reason", item.reason || "根据本机作答记录安排。"));
     if (Array.isArray(item.weak_points) && item.weak_points.length) {
       content.appendChild(el("p", "learning-plan-weak", "重点补齐：" + item.weak_points.slice(0, 3).join("、")));

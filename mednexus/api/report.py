@@ -269,6 +269,17 @@ def overview_payload(db, learner):
     literature_day = db.execute(
         "SELECT COUNT(*) FROM events WHERE learner=? AND kind='literature' AND created BETWEEN ? AND ?",
         (learner, day_start, now)).fetchone()[0]
+    plan = build_plan(snap['concepts'], attempts_get(db, learner), snap['active'],
+                      scope_name=(COURSE.get('name') if isinstance(COURSE, dict) else None))
+    # 第五代编排闭环：把诊断出的变式重测并入今日计划，让首页计划真正由闭环驱动。
+    # 编排是增强层，任何异常都降级为原始计划，绝不影响 /api/overview。
+    try:
+        import orchestration
+        rows = attempts_get(db, learner)
+        loop = orchestration.loop_step(CONCEPTS, rows)
+        plan = orchestration.weave_plan(plan, loop)
+    except Exception:
+        pass
     return {
         "course": snap["course"], "active": snap["active"],
         "day_date": local_date.strftime("%Y-%m-%d"),
@@ -284,7 +295,7 @@ def overview_payload(db, learner):
         "stats": snap["stats"],
         "units": unit_stats(snap["concepts"]),
         "learning_time": time_stats(db, learner),
-        "learning_plan": build_plan(snap['concepts'], attempts_get(db, learner), snap['active']),
+        "learning_plan": plan,
         "image_quiz": image_stats(db, learner),
         "status": {"llm": bool(API_KEY), "model": MODEL if API_KEY else "本地规则引擎",
                    "pubmed": True, "coverage_threshold": textbook.MIN_COVERAGE,

@@ -447,3 +447,56 @@ def loop_step(concepts, attempts, *, now=None):
         'plan_update': plan_update,
         'evidence_discipline': {'mastery_claimed': False, 'note': _EVIDENCE_NOTE},
     }
+
+
+def weave_plan(plan, loop, *, plan_limit=None):
+    """把闭环诊断出的变式重测并入今日计划，让编排真正驱动首页计划。
+
+    输入 ``plan`` 是 ``planning.build_plan()`` 的输出，``loop`` 是 ``loop_step()``
+    的输出。只做编排合并，不生成医学内容、不改写历史、不判定"已掌握"。
+
+    规则：
+      · 仅当 ``loop.plan_update.action == 'prepend'`` 且有合法 proposed_item 时介入，
+        否则原样返回（不复制、不改）。
+      · 补救项去重：若 plan.items 已有同一 concept 的条目，用补救项替换它并前置，
+        避免同一知识点在今日计划里出现两条。
+      · 总数不超过 ``plan_limit``（缺省取 plan 自带值）；不改动其它条目的顺序。
+      · 补选项带 ``origin='orchestration'`` 标记，供前端说明来源。
+      · 入参损坏时安全降级，返回原 plan，绝不抛异常影响计划接口。
+    """
+    if not isinstance(plan, dict) or not isinstance(loop, dict):
+        return plan
+    try:
+        update = loop.get('plan_update')
+        if not isinstance(update, dict) or update.get('action') != 'prepend':
+            return plan
+        proposal = update.get('proposed_item')
+        if not isinstance(proposal, dict) or not isinstance(proposal.get('concept'), str):
+            return plan
+        items = plan.get('items')
+        if not isinstance(items, list):
+            return plan
+        limit = plan_limit
+        if limit is None:
+            srs_meta = plan.get('srs')
+            limit = srs_meta.get('plan_limit') if isinstance(srs_meta, dict) else None
+        try:
+            limit = int(limit) if limit is not None else len(items) + 1
+        except (TypeError, ValueError, OverflowError):
+            limit = len(items) + 1
+        if limit < 1:
+            limit = 1
+
+        remediation = dict(proposal)
+        remediation['origin'] = 'orchestration'
+        # 补选项沿用闭环的建议字段，不补造 reason 之外的医学内容。
+        cleaned = [item for item in items
+                   if not (isinstance(item, dict) and item.get('concept') == proposal['concept'])]
+        merged = [remediation] + cleaned
+        out = dict(plan)
+        out['items'] = merged[:limit]
+        out['orchestrated'] = True
+        return out
+    except Exception:
+        # 编排是增强层：任何异常都不能让首页计划失败。
+        return plan

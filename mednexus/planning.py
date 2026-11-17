@@ -82,7 +82,7 @@ def _events(rows):
 
 
 def build_plan(concepts, attempts, active=None, now=None, *,
-               daily_new_limit=None, plan_limit=None, target_retention=None):
+               daily_new_limit=None, plan_limit=None, target_retention=None, scope_name=None):
     """Return at most ``plan_limit`` actionable items; callers filter attempts by learner.
 
     ``concepts`` is the existing progress() output and ``attempts`` comes from
@@ -211,7 +211,8 @@ def build_plan(concepts, attempts, active=None, now=None, *,
                       'kind': 'diagnostic', 'reason': '尚无作答记录，先用三个要点了解当前掌握情况。',
                       'due_at': None, 'last_score': None, 'weak_points': []})
         new_budget -= 1
-    return {'scope': f'脑神经示例章节 · {len(concepts)}个知识点',
+    scope = f'{scope_name} · {len(concepts)}个知识点' if scope_name else f'脑神经示例章节 · {len(concepts)}个知识点'
+    return {'scope': scope,
             'method': '优先未完成任务、薄弱要点与到期复习；每天最多安排{}个新知识点。'
                       '复习间隔由 FSRS-lite 计算（目标保持率 {:.0%}）：只有独立完成的迁移题才推进稳定度，'
                       '答错立刻把复习拉回 1 天内，同日重复或借助提示的高分不推进；'
