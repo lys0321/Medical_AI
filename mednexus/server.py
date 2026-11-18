@@ -33,7 +33,8 @@ from api import core
 from api.core import (ROOT, DB_PATH, QUICK_NOTES_PATH, QUICK_NOTES_SOURCE, LOCK,
                       TUTOR_LOCKS, API_KEY, MODEL, BASE_URL, DEFAULT_LEARNER,
                       is_private_ip, InputError, ClosingConnection, connect, init_db,
-                      state_get, state_save, event, attempts_get, progress, recommend)
+                      state_get, state_save, event, attempts_get, progress, recommend,
+                      local_only, data_mode)
 from api.task import (public_active, make_task, request_hint, tutor_context, tutor_messages, tutor_snapshot, tutor_turn)
 from api.answer import (grade, answer_text, text_excerpts)
 from api.study import (builtins, textbook_sources, all_sources, tokenize, retrieve, verify_citation, study_payload, import_sources, image_attempts, image_stats, image_quiz)

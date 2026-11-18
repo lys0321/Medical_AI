@@ -40,7 +40,7 @@ import pmc
 import histology_quiz
 import vision
 
-from api.core import InputError, connect, event
+from api.core import InputError, connect, event, local_only
 
 def research_gate(c, question, force=False):
     if not isinstance(question, str) or len(question.strip()) > 300:
@@ -69,6 +69,8 @@ def ncbi_get(endpoint, params):
 def ncbi_get_url(url):
     """所有 NCBI 请求的唯一出口：限速、体积上限、TLS 兼容回退。"""
     global NCBI_LAST
+    if local_only():
+        raise InputError("当前是本机模式，文献检索已关闭；教材页码与出题不受影响。")
     if not url.startswith(NCBI_ALLOWED_PREFIXES):
         raise InputError("只允许访问 NCBI 官方接口")
     with NCBI_LOCK:

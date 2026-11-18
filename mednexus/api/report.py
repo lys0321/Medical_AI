@@ -46,7 +46,7 @@ from api.core import InputError, state_get, attempts_get, progress, recommend
 from api.research import pubmed
 from api.study import textbook_sources, all_sources, image_stats, image_quiz
 from api.task import public_active
-from api.core import InputError, state_get, attempts_get, progress, recommend, API_KEY, MODEL
+from api.core import InputError, state_get, attempts_get, progress, recommend, API_KEY, MODEL, data_mode, local_only
 
 def snapshot(db, learner):
     items = progress(db, learner)
@@ -300,7 +300,9 @@ def overview_payload(db, learner):
         "learning_time": time_stats(db, learner),
         "learning_plan": plan,
         "image_quiz": image_stats(db, learner),
-        "status": {"llm": bool(API_KEY), "model": MODEL if API_KEY else "本地规则引擎",
-                   "pubmed": True, "coverage_threshold": textbook.MIN_COVERAGE,
-                   "textbook": textbook.status()["loaded"]},
+        "status": {"llm": bool(API_KEY) and not local_only(),
+                   "model": MODEL if (API_KEY and not local_only()) else "本地规则引擎",
+                   "pubmed": not local_only(), "coverage_threshold": textbook.MIN_COVERAGE,
+                   "textbook": textbook.status()["loaded"],
+                   "data_mode": data_mode()},
     }

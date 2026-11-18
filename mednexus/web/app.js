@@ -156,6 +156,22 @@ function renderRecent(list) {
   });
 }
 
+function renderDataMode(status) {
+  const box = $("dataMode");
+  if (!box) return;
+  const dm = status && status.data_mode;
+  if (!dm) {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  box.classList.toggle("is-local", dm.mode === "local");
+  box.classList.toggle("is-cloud", dm.mode !== "local");
+  box.textContent = dm.label || (dm.mode === "local" ? "本机模式" : "云端模式");
+  const egress = Array.isArray(dm.egress) ? dm.egress.filter(Boolean) : [];
+  box.title = (dm.note || "") + (egress.length ? "\n会连出去的地址：" + egress.join("、") : "\n没有任何出站请求");
+}
+
 function renderChecklist(data) {
   const ul = $("checklist");
   ul.innerHTML = "";
@@ -1014,6 +1030,7 @@ async function refreshOverview() {
         }
       });
     }
+    renderDataMode(overviewData.status);
     renderChecklist(overviewData);
     renderLearningPlan(overviewData.learning_plan);
     if (document.querySelector("#view-learn.is-active")) renderLearn(overviewData);

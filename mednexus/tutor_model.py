@@ -26,6 +26,9 @@ def _config():
 
 def _cloud_config():
     """内置云端模型配置；返回 (base, model, key)，未配置或显式关闭时返回 None。"""
+    if os.environ.get('MEDNEXUS_LOCAL_ONLY', '').strip().lower() in ('1', 'true', 'on', 'yes'):
+        # 本机模式：对话一律不外发，回落到本机 Ollama 或教材摘录。
+        return None
     if os.environ.get('MEDNEXUS_CLOUD', '1').strip().lower() in ('0', 'false', 'off', 'no'):
         return None
     key = os.environ.get('MEDNEXUS_API_KEY', '').strip()

@@ -83,6 +83,16 @@ def _load_env_file():
 
 _load_env_file()
 
+
+def local_only():
+    """本机模式开关：置 1 时关掉一切会连外网的功能（答疑模型、文献检索、云同步）。
+
+    这是可以当场演示的"数据不出本机"：同一条问题，本机模式下没有任何出站连接，
+    答案仍由本地教材索引摘录给出，页码照样能回书核对。
+    """
+    return os.environ.get("MEDNEXUS_LOCAL_ONLY", "").strip().lower() in ("1", "true", "on", "yes")
+
+
 DB_PATH = Path(os.environ.get("MEDNEXUS_DB", str(ROOT / "data" / "learning.sqlite3")))
 QUICK_NOTES_PATH = ROOT / "data" / "quick_notes_cards.json"
 QUICK_NOTES_SOURCE = ROOT / "data" / "quick_notes_source.pdf"
@@ -92,6 +102,37 @@ API_KEY = os.environ.get("MEDNEXUS_API_KEY", "")
 MODEL = os.environ.get("MEDNEXUS_MODEL", "deepseek-chat")
 BASE_URL = os.environ.get("MEDNEXUS_BASE_URL", "https://api.deepseek.com/v1").rstrip("/")
 DEFAULT_LEARNER = hashlib.sha256(b"mednexus-local").hexdigest()[:48]
+
+
+def _host_of(url):
+    try:
+        return urllib.parse.urlsplit(url or "").hostname or ""
+    except ValueError:
+        return ""
+
+
+def data_mode():
+    """当前数据边界：本机模式不产生任何出站请求；云端模式列出会连出去的地址。"""
+    if local_only():
+        return {
+            "mode": "local",
+            "label": "本机模式 · 数据不出本机",
+            "egress": [],
+            "note": "教材检索、出题、判分全部在本机完成；答疑只用教材原文摘录，不调用外部模型，"
+                    "文献检索与云同步已关闭。",
+        }
+    egress = []
+    if API_KEY:
+        egress.append(_host_of(BASE_URL) or "自定义模型服务")
+    egress.append("eutils.ncbi.nlm.nih.gov")
+    return {
+        "mode": "cloud",
+        "label": "云端模式",
+        "egress": egress,
+        "note": "提问与教材片段会发给你配置的模型服务；文献检索访问 NCBI 官方接口。",
+    }
+
+
 def is_private_ip(ip):
     """内网地址判断：10/8、172.16/12、192.168/16、127/8。"""
     try:

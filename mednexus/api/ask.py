@@ -42,7 +42,7 @@ import vision
 
 from api.core import InputError, event
 from api.study import all_sources, tokenize, retrieve, verify_citation
-from api.core import InputError, event, API_KEY, MODEL, BASE_URL
+from api.core import InputError, event, API_KEY, MODEL, BASE_URL, local_only
 
 # 教材答疑是否交给模型组织语言。默认关闭：不同机器上的小模型输出质量差别很大，
 # 而“答案能被翻到”这条底线靠摘录就能守住。打开：set MEDNEXUS_ASK_MODEL=1 后再启动服务。
@@ -54,8 +54,8 @@ EXCERPT_LIMIT = 600
 
 
 def cloud_json(system, payload, max_tokens=700, timeout=20):
-    """OpenAI 兼容的云端 JSON 输出；未配置密钥或调用失败时返回 None。"""
-    if not API_KEY:
+    """OpenAI 兼容的云端 JSON 输出；未配置密钥、本机模式或调用失败时返回 None。"""
+    if not API_KEY or local_only():
         return None
     try:
         return tutor_model.cloud_json(system, payload, max_tokens=max_tokens, timeout=timeout)
@@ -64,7 +64,7 @@ def cloud_json(system, payload, max_tokens=700, timeout=20):
 
 
 def model_json(system, payload):
-    if not API_KEY:
+    if not API_KEY or local_only():
         return None
     data = json.dumps({"model": MODEL, "temperature": .1, "messages": [{"role": "system", "content": system}, {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}], "max_tokens": 1800}, ensure_ascii=False).encode()
     req = urllib.request.Request(BASE_URL + "/chat/completions", data=data, headers={"Content-Type": "application/json", "Authorization": "Bearer " + API_KEY})
