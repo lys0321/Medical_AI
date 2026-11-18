@@ -87,16 +87,16 @@
         </div>
       </div>
 
-      <article class="panel galaxy-panel" id="galaxyPanel" aria-labelledby="galaxyTitle">
-        <div class="galaxy-heading">
+      <article class="panel pulse-panel" id="pulsePanel" aria-labelledby="pulseTitle">
+        <div class="pulse-heading">
           <div>
-            <p class="study-label">把真实学习状态连成星图</p>
-            <h2 id="galaxyTitle">知识星图</h2>
+            <p class="study-label">从四个诚实维度看你的学习</p>
+            <h2 id="pulseTitle">循证学习罗盘</h2>
           </div>
-          <p class="galaxy-hint">每颗星是一个知识点，亮度代表掌握程度。点击星球直达学习。</p>
+          <button class="link small" id="pulseToMe" data-view="me" type="button">查看完整知识星图 ›</button>
         </div>
-        <div class="galaxy-mount" id="galaxyMount">
-          <p class="study-source" role="status">正在绘制知识星图…</p>
+        <div class="pulse-mount" id="pulseMount" role="status">
+          <p class="study-source">正在读取学习态势…</p>
         </div>
       </article>
 
@@ -420,6 +420,19 @@
 
       <article class="profile-card" id="profileCard"></article>
 
+      <article class="panel galaxy-panel" id="galaxyPanel" aria-labelledby="galaxyTitle">
+        <div class="galaxy-heading">
+          <div>
+            <p class="study-label">把真实学习状态连成星图</p>
+            <h2 id="galaxyTitle">知识星图</h2>
+          </div>
+          <p class="galaxy-hint">每颗星是一个知识点，大小代表掌握程度、颜色代表状态。点击星球直达学习。</p>
+        </div>
+        <div class="galaxy-mount" id="galaxyMount">
+          <p class="study-source" role="status">正在绘制知识星图…</p>
+        </div>
+      </article>
+
       <article class="panel cloud-panel" id="cloudPanel" hidden>
         <div class="panel-head"><span class="panel-icon blue"><svg><use href="#i-spark"></use></svg></span><h3>跨设备同步<small>可选 · 本机仍是唯一真相源</small></h3></div>
         <p class="note-text" id="cloudHint">登录后可在不同设备间同步学习进度与统计。只上传学习摘要，不含教材原文、作答/提问原文或身份标识；上传与恢复都由你手动触发。</p>
@@ -506,6 +519,7 @@
 <script src="research-session.js"></script>
 <script src="task-draft.js"></script>
 <script src="learning-report.js"></script>
+<script src="pulse.js"></script>
 <script src="galaxy.js"></script>
 <script src="paper-reading.js"></script>
 <script src="research-query.js"></script>

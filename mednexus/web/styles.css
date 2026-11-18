@@ -921,52 +921,98 @@ svg { width: 1.2em; height: 1.2em; fill: none; stroke: currentColor; stroke-widt
 /* 闭环编排生成的今日计划补救项 */
 .learning-plan-item.is-remediation { background: linear-gradient(120deg, #fff6ea, #fff); border-color: #f0d6ad; }
 
-/* ===== 知识星图：真实掌握度驱动的星座可视化（视觉差异化亮点） ===== */
+/* ===== 循证学习罗盘：首页浅色态势仪表盘（与整体配色协调、不突兀） ===== */
+.pulse-panel { overflow: hidden; }
+.pulse-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; padding: 18px 20px 0; }
+.pulse-heading h2 { font-size: 19px; font-weight: 700; color: var(--ink); margin: 2px 0 0; }
+.pulse-mount {
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  margin: 14px 16px 4px; padding: 14px 16px; border-radius: 14px;
+  background: linear-gradient(135deg, var(--surface-2), #eef4ff 60%, #eaf6f1);
+  border: 1px solid var(--line);
+}
+.pulse-svg { flex: 0 0 168px; width: 168px; height: 168px; }
+.pulse-track { stroke: var(--line-2); stroke-width: 7; opacity: .7; }
+.pulse-arc { stroke-width: 7; stroke-linecap: round; fill: none; transition: stroke-dasharray .8s ease; }
+.pulse-arc--evidence { stroke: var(--blue); }
+.pulse-arc--mastery { stroke: var(--green); }
+.pulse-arc--loop { stroke: var(--amber); }
+.pulse-arc--consistency { stroke: #8b7cf0; }
+.pulse-arc.is-unmeasured { stroke: var(--line-2); }
+.pulse-index { fill: var(--ink); font-size: 30px; font-weight: 700; }
+.pulse-level { fill: var(--muted); font-size: 11px; }
+.pulse-dims { flex: 1 1 280px; display: grid; gap: 8px; min-width: 220px; }
+.pulse-dim {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 11px; background: #fff;
+  padding: 8px 11px; font: inherit; transition: border-color .2s, background .2s;
+}
+.pulse-dim:hover { border-color: var(--blue); background: var(--blue-soft); }
+.pulse-dim:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.pulse-dim-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.pulse-dim-top b { font-size: 12.5px; color: var(--ink); font-weight: 600; }
+.pulse-dim-top em { font-size: 11px; color: var(--muted); font-style: normal; }
+.pulse-dim-detail { display: block; font-size: 11px; color: var(--ink-2); margin: 3px 0 6px; line-height: 1.5; }
+.pulse-dim-bar { display: block; height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.pulse-dim-bar i { display: block; height: 100%; border-radius: 4px; background: var(--blue); transition: width .6s ease; }
+.pulse-dim--mastery .pulse-dim-bar i { background: var(--green); }
+.pulse-dim--loop .pulse-dim-bar i { background: var(--amber); }
+.pulse-dim--consistency .pulse-dim-bar i { background: #8b7cf0; }
+.pulse-foot { margin: 4px 20px 16px; }
+.pulse-headline { font-size: 12.5px; color: var(--ink-2); line-height: 1.7; margin: 0 0 4px; }
+.pulse-disclaimer { font-size: 11px; color: var(--muted); line-height: 1.6; margin: 0; }
+@media (max-width: 720px) {
+  .pulse-mount { gap: 12px; }
+  .pulse-svg { flex-basis: 140px; width: 140px; height: 140px; }
+}
+
+/* ===== 知识星图：真实掌握度驱动的星座可视化（个人中心内，浅色协调版） ===== */
 .galaxy-panel { padding: 0; overflow: hidden; }
 .galaxy-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; padding: 18px 20px 0; }
 .galaxy-heading h2 { font-size: 19px; font-weight: 700; color: var(--ink); margin: 2px 0 0; }
-.galaxy-hint { font-size: 12px; color: var(--muted); margin: 0 0 2px; max-width: 300px; line-height: 1.6; }
+.galaxy-hint { font-size: 12px; color: var(--muted); margin: 0 0 2px; max-width: 320px; line-height: 1.6; }
 .galaxy-mount {
   position: relative; margin: 14px 12px 12px; border-radius: 14px; overflow: hidden;
-  background: radial-gradient(circle at 50% 45%, #1b2a52 0%, #101a36 55%, #0a1230 100%);
+  background: radial-gradient(circle at 50% 40%, #ffffff 0%, #f4f8ff 55%, #eaf1fd 100%);
+  border: 1px solid var(--line);
 }
 .galaxy-mount::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .55;
-  background-image: radial-gradient(#ffffff55 0.6px, transparent 0.7px), radial-gradient(#9fc0ff44 0.6px, transparent 0.7px);
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+  background-image: radial-gradient(#b9cdf022 0.6px, transparent 0.7px), radial-gradient(#9fc0ff1c 0.6px, transparent 0.7px);
   background-size: 38px 38px, 57px 57px; background-position: 0 0, 19px 11px;
 }
-.galaxy-empty { color: #cbd8f5; font-size: 13px; text-align: center; padding: 60px 20px; position: relative; }
+.galaxy-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 60px 20px; position: relative; }
 .galaxy-svg { display: block; width: 100%; height: auto; position: relative; }
-.galaxy-orbit { stroke: #4a63a844; stroke-width: 1; stroke-dasharray: 3 7; }
-.galaxy-link { stroke: #6d8ad633; stroke-width: 1; }
-.galaxy-core-track { stroke: #ffffff1c; stroke-width: 6; }
-.galaxy-core-progress { stroke: #5fd6a8; stroke-width: 6; stroke-linecap: round; transition: stroke-dasharray .8s ease; }
-.galaxy-core-num { fill: #f2f7ff; font-size: 17px; font-weight: 700; }
-.galaxy-core-label { fill: #9fb4de; font-size: 10px; }
+.galaxy-orbit { stroke: #b9cdf055; stroke-width: 1; stroke-dasharray: 3 7; }
+.galaxy-link { stroke: #b9cdf055; stroke-width: 1; }
+.galaxy-core-track { stroke: var(--line-2); stroke-width: 6; }
+.galaxy-core-progress { stroke: var(--green); stroke-width: 6; stroke-linecap: round; transition: stroke-dasharray .8s ease; }
+.galaxy-core-num { fill: var(--ink); font-size: 17px; font-weight: 700; }
+.galaxy-core-label { fill: var(--muted); font-size: 10px; }
 .galaxy-node { cursor: pointer; animation: galaxy-fade .6s ease both; }
 .galaxy-node:focus { outline: none; }
-.galaxy-node:focus .galaxy-halo, .galaxy-node:hover .galaxy-halo { stroke: #ffffffcc; stroke-width: 1.5; }
-.galaxy-halo { fill: #ffffff10; stroke: #ffffff2e; stroke-width: .5; transition: stroke .2s, stroke-width .2s; }
+.galaxy-node:focus .galaxy-halo, .galaxy-node:hover .galaxy-halo { stroke: var(--blue); stroke-width: 1.5; }
+.galaxy-halo { fill: #ffffffaa; stroke: #d6e3f7; stroke-width: .5; transition: stroke .2s, stroke-width .2s; }
 .galaxy-star { transition: filter .2s, opacity .2s; }
-.galaxy-node:hover .galaxy-star { filter: brightness(1.35); }
-.galaxy-node-label { fill: #d9e6ff; font-size: 11px; font-weight: 500; paint-order: stroke; stroke: #0a1230cc; stroke-width: 3px; }
-/* 状态配色：只表达学习状态，不是医学质量评级 */
-.tone-mastered .galaxy-star { fill: #5fd6a8; filter: drop-shadow(0 0 6px #5fd6a8aa); }
-.tone-progressing .galaxy-star { fill: #7cb0f7; filter: drop-shadow(0 0 5px #7cb0f788); }
-.tone-weak .galaxy-star { fill: #ff9d7a; filter: drop-shadow(0 0 7px #ff9d7aaa); }
-.tone-untested .galaxy-star { fill: #8fa8d4; opacity: .85; filter: drop-shadow(0 0 4px #8fa8d455); animation: galaxy-twinkle 3.4s ease-in-out infinite; }
-@keyframes galaxy-twinkle { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
-.galaxy-pulse { fill: none; stroke: #ff9d7a; stroke-width: 1.5; transform-origin: center; animation: galaxy-pulse 2.2s ease-out infinite; }
-.galaxy-legend-dot, .legend-dot.tone-mastered { background: #5fd6a8; }
-.legend-dot.tone-progressing { background: #7cb0f7; }
-.legend-dot.tone-weak { background: #ff9d7a; }
-.legend-dot.tone-untested { background: #7186ad; }
+.galaxy-node:hover .galaxy-star { filter: brightness(1.08); }
+.galaxy-node-label { fill: var(--ink); font-size: 11px; font-weight: 500; paint-order: stroke; stroke: #ffffffdd; stroke-width: 3px; }
+/* 状态配色：只表达学习状态，不是医学质量评级。浅底上用主题色系。 */
+.tone-mastered .galaxy-star { fill: var(--green); }
+.tone-progressing .galaxy-star { fill: var(--blue); }
+.tone-weak .galaxy-star { fill: #e2835c; }
+.tone-untested .galaxy-star { fill: #aebdd6; opacity: .9; animation: galaxy-twinkle 3.4s ease-in-out infinite; }
+@keyframes galaxy-twinkle { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+.galaxy-pulse { fill: none; stroke: #e2835c; stroke-width: 1.5; transform-origin: center; animation: galaxy-pulse 2.2s ease-out infinite; }
+.legend-dot.tone-mastered { background: var(--green); }
+.legend-dot.tone-progressing { background: var(--blue); }
+.legend-dot.tone-weak { background: #e2835c; }
+.legend-dot.tone-untested { background: #aebdd6; }
 .galaxy-foot { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; padding: 0 22px 18px; position: relative; }
 .galaxy-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; }
-.galaxy-legend-item { display: inline-flex; align-items: center; gap: 5px; color: #c2d2f2; font-size: 11.5px; }
+.galaxy-legend-item { display: inline-flex; align-items: center; gap: 5px; color: var(--ink-2); font-size: 11.5px; }
 .galaxy-legend-item .legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-.galaxy-weak-legend { color: #ffb498; font-size: 11.5px; }
-.galaxy-source { color: #7186ad; font-size: 11px; margin-left: auto; }
+.galaxy-weak-legend { color: #c96a45; font-size: 11.5px; }
+.galaxy-source { color: var(--muted); font-size: 11px; margin-left: auto; }
 @keyframes galaxy-pulse { 0% { opacity: .85; transform: scale(.82); } 70% { opacity: 0; transform: scale(1.25); } 100% { opacity: 0; transform: scale(1.25); } }
 @keyframes galaxy-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {

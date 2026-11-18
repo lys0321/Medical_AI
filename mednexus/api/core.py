@@ -122,8 +122,12 @@ def data_mode():
                     "文献检索与云同步已关闭。",
         }
     egress = []
-    if API_KEY:
-        egress.append(_host_of(BASE_URL) or "自定义模型服务")
+    # 在函数内读环境变量，与 local_only() 保持一致：这样配置变更与测试注入
+    # 都能实时反映"当前数据边界"，而不是卡在模块 import 时的旧值。
+    key = os.environ.get("MEDNEXUS_API_KEY", API_KEY)
+    base = os.environ.get("MEDNEXUS_BASE_URL", BASE_URL)
+    if key:
+        egress.append(_host_of(base) or "自定义模型服务")
     egress.append("eutils.ncbi.nlm.nih.gov")
     return {
         "mode": "cloud",

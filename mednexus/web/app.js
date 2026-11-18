@@ -1020,13 +1020,13 @@ async function refreshOverview() {
   try {
     overviewData = await api("/api/overview");
     renderRecent(overviewData.recent || []);
-    if (typeof renderGalaxy === "function") {
-      const mount = $("galaxyMount");
-      if (mount) renderGalaxy(mount, overviewData.galaxy, {
-        onOpen: (cid) => {
-          if (!cid) return;
-          showView("quiz", { restoreTask: false });
-          loadTask(cid, "auto");
+    // 首页放浅色循证罗盘（不突兀）；星图移到个人中心，由 renderMe 挂载。
+    if (typeof renderPulse === "function") {
+      const mount = $("pulseMount");
+      if (mount) renderPulse(mount, overviewData.pulse, {
+        onInspect: (key) => {
+          const view = { evidence: "ask", mastery: "quiz", loop: "quiz", consistency: "me" }[key];
+          if (view) showView(view);
         }
       });
     }
@@ -1949,6 +1949,17 @@ if (quizAskForm) {
 /* ---------- 个人中心：学习数据 ---------- */
 function renderMe(data) {
   if (!data) return;
+  // 知识星图在个人中心渲染（首页已改为循证罗盘）。
+  if (typeof renderGalaxy === "function") {
+    const mount = $("galaxyMount");
+    if (mount) renderGalaxy(mount, data.galaxy, {
+      onOpen: (cid) => {
+        if (!cid) return;
+        showView("quiz", { restoreTask: false });
+        loadTask(cid, "auto");
+      }
+    });
+  }
   renderProfileCard(data);
   renderMeStats(data);
   renderMeProgress(data);

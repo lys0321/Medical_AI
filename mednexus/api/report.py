@@ -37,6 +37,7 @@ import text_grading
 import citations
 import evidence
 import galaxy
+import pulse
 import pmc
 import histology_quiz
 import vision
@@ -281,6 +282,7 @@ def overview_payload(db, learner):
         plan = orchestration.weave_plan(plan, loop)
     except Exception:
         pass
+    learning_time = time_stats(db, learner)
     return {
         "course": snap["course"], "active": snap["active"],
         "day_date": local_date.strftime("%Y-%m-%d"),
@@ -297,7 +299,13 @@ def overview_payload(db, learner):
         "units": unit_stats(snap["concepts"]),
         "galaxy": galaxy.build_galaxy(snap["concepts"], snap["stats"],
                                       _weak(db, learner)),
-        "learning_time": time_stats(db, learner),
+        "pulse": pulse.build_pulse({
+            "questions": {"total": len(cited), "week": len(week), "week_cited": sum(week),
+                          "day": len(day), "day_cited": sum(day)},
+            "stats": snap["stats"], "learning_plan": plan,
+            "learning_time": learning_time,
+        }),
+        "learning_time": learning_time,
         "learning_plan": plan,
         "image_quiz": image_stats(db, learner),
         "status": {"llm": bool(API_KEY) and not local_only(),
