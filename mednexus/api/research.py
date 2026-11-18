@@ -36,6 +36,7 @@ import tutor_model
 import text_grading
 import citations
 import evidence
+import research_trace
 import pmc
 import histology_quiz
 import vision
@@ -54,7 +55,22 @@ def research_gate(c, question, force=False):
     open_signal = question == c["research"] or bool(re.search(r"研究|证据|争议|尚不明确|未明|差异|恢复|病因|指标|是否|能否|影响|不同|前沿|验证", question))
     eligible = relevant and open_signal
     proposal = build_query_proposal(c, question) if eligible else None
-    return {"eligible": eligible, "question": question, "reason": "疑问涉及可检验的差异、机制或证据，可以从研究文献继续探索；检索结果仍需人工评估相关性。" if eligible else "当前更像概念或通路问题，先用学习卡和定向练习补齐。可进一步明确要比较的机制、条件或证据。", "query": proposal["query"] if proposal else "", "suggestion": c["research"], "mapping": proposal["mapping"] if proposal else "尚未生成检索建议", "query_plan": proposal}
+    trace = research_trace.build_trace(
+        question,
+        proposal["query"] if proposal else "",
+        proposal["mapping"] if proposal else "",
+        [],
+    )
+    return {
+        "eligible": eligible,
+        "question": question,
+        "reason": "疑问涉及可检验的差异、机制或证据，可以从研究文献继续探索；检索结果仍需人工评估相关性。" if eligible else "当前更像概念或通路问题，先用学习卡和定向练习补齐。可进一步明确要比较的机制、条件或证据。",
+        "query": proposal["query"] if proposal else "",
+        "suggestion": c["research"],
+        "mapping": proposal["mapping"] if proposal else "尚未生成检索建议",
+        "query_plan": proposal,
+        "research_trace": trace,
+    }
 
 
 def ncbi_get(endpoint, params):
@@ -296,7 +312,10 @@ def pubmed_compat(db, learner, body, request=None):
           "pmids": [p["pmid"] for p in out["papers"]]})
     return {**request, "papers": out["papers"], "note": request["query"],
             "count": out["count"], "fetched_at": out["fetched_at"], "cached": out["cached"],
-            "evidence_mix": out.get("evidence_mix")}
+            "evidence_mix": out.get("evidence_mix"),
+            "research_trace": research_trace.build_trace(
+                request["question"], request["query"], request["mapping"],
+                out["papers"], out.get("evidence_mix"))}
 
 # ---- 研究域自有的连接状态（不放在 core：只有这里用）----
 NCBI_LOCK = threading.Lock()

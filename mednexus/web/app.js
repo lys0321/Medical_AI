@@ -72,6 +72,7 @@ async function api(path, payload) {
     if (!res.ok) {
       const error = new Error(data.error || "请求失败");
       if (data.url) error.url = data.url;
+      if (data.research_trace) error.researchTrace = data.research_trace;
       throw error;
     }
     return data;
@@ -862,6 +863,7 @@ function researchSourceLabel(conceptId) {
 function resetResearchContext() {
   wanderOriginConcept = null; researchContext = null;
   pmRequestId++; readingRequestId++;
+  mountResearchTrace(null);
   $("pmResults").innerHTML = ""; $("pmStatus").textContent = "";
   $("paperReading").hidden = true; $("researchReturn").hidden = true;
   $("researchQueryEditor").hidden = true; $("pmQuery").value = "";
@@ -869,6 +871,33 @@ function resetResearchContext() {
   $("pmQ").value = "";
   if (typeof clearResearchQueryPlan === 'function') clearResearchQueryPlan($("researchQueryPlan"));
   try { if (typeof clearResearchDraft === "function") clearResearchDraft(sessionStorage, learnerId()); } catch (_) {}
+}
+
+/* 循证研究画布：把后端的五步留痕链路接到文献漫游页。
+   渲染器缺失或数据缺失时静默隐藏，不影响原有检索流程。 */
+function mountResearchTrace(trace) {
+  const mount = $("researchTraceMount");
+  if (!mount) return;
+  if (!trace || typeof renderResearchTrace !== "function") {
+    mount.hidden = true;
+    return;
+  }
+  renderResearchTrace(mount, trace, { onStage: (key) => {
+    if (key === "focus-question") { $("pmQ")?.focus?.(); return; }
+    if (key === "focus-query") {
+      if ($("researchQueryEditor")) $("researchQueryEditor").hidden = false;
+      $("pmQuery")?.focus?.();
+      return;
+    }
+    if (key === "read-paper" && typeof $$ === "function") {
+      const first = $$(".paper-read", $("pmResults"))[0];
+      if (first) { if (typeof first.click === "function") first.click(); else first.listeners?.click?.(); }
+      return;
+    }
+    const target = key === "show-evidence" ? $("pmResults") : key === "focus-query" ? $("pmQuery") : mount;
+    target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  } });
+  mount.hidden = false;
 }
 
 function rememberResearchWorkspace() {
@@ -931,6 +960,7 @@ async function pmSearch(q, originConcept = null, editedQuery = null) {
       if (typeof clearResearchQueryPlan === 'function') clearResearchQueryPlan($("researchQueryPlan"));
       const gate = await api("/api/research", { concept: originConcept, question: query });
       if (request !== pmRequestId) return;
+      mountResearchTrace(gate.research_trace || null);
       $("pmStatus").textContent = gate.reason + (gate.eligible ? "\n" + gate.mapping : "\n建议先补学，再明确要比较的条件或证据。");
       if (gate.eligible) {
         $("pmQuery").value = gate.query;
@@ -967,6 +997,7 @@ async function pmSearch(q, originConcept = null, editedQuery = null) {
         "\nPubMed 共 " + data.count + " 条匹配；下方按发表日期显示本次获取的文献。摘要为原文节选，具体结论请打开原文核对。"
       : "";
     renderPapers($("pmResults"), data.papers, data.note, null, data.evidence_mix);
+    mountResearchTrace(data.research_trace || null);
     if (originConcept) { $("pmQuery").value = data.note; $("researchQueryEditor").hidden = false; }
     if (typeof updateResearchQueryPlan === 'function') updateResearchQueryPlan($("researchQueryPlan"), $("pmQuery").value);
     rememberResearchWorkspace();
@@ -977,6 +1008,7 @@ async function pmSearch(q, originConcept = null, editedQuery = null) {
   } catch (e) {
     if (request !== pmRequestId) return;
     $("pmStatus").textContent = "检索失败：" + e.message;
+    mountResearchTrace(e.researchTrace || null);
     if (originConcept && editedQuery !== null) $("researchQueryEditor").hidden = false;
     rememberResearchWorkspace();
     // 检索失败也要留一条可点的出路：后端给了检索式就用它，否则用原问题

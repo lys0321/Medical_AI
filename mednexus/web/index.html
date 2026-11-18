@@ -359,6 +359,7 @@
         <button class="send" type="submit" aria-label="判断问题或检索文献"><svg><use href="#i-search"></use></svg></button>
       </form>
       <p id="researchContextLabel" class="study-label"></p>
+      <div id="researchTraceMount" class="research-trace-mount" hidden aria-live="polite"></div>
       <p class="study-source">草稿仅保留在当前浏览器会话中，刷新后可恢复；不会自动检索。 <button id="newResearch" class="link" type="button">清空草稿，开始独立检索</button></p>
       <div id="researchQueryEditor" class="panel research-query-editor" hidden>
         <div id="researchQueryPlan"></div>
@@ -523,6 +524,7 @@
 <script src="galaxy.js"></script>
 <script src="paper-reading.js"></script>
 <script src="research-query.js"></script>
+<script src="research-trace.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"></script>
 <script src="cloud-config.js"></script>
 <script src="cloud.js"></script>

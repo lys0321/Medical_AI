@@ -42,6 +42,7 @@ from api.answer import grade, answer_text
 from api.study import study_payload, import_sources, image_quiz
 from api.ask import ask, ask_compat, model_json
 from api.research import research_gate, pubmed, pubmed_compat, export_citations
+import research_trace
 from api.drill import (catalog as drill_catalog, make_task as drill_task, answer as drill_answer,
                        triple_catalog, triple_task, triple_answer)
 from api.report import (snapshot, report, export_learning, overview_payload,
@@ -383,7 +384,9 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception:
                     return self.send({**research, "note": research["query"],
                                       "error": "PubMed 当前连接失败，未返回任何虚构文献。可稍后重试或直接打开 PubMed。",
-                                      "url": "https://pubmed.ncbi.nlm.nih.gov/?term=" + urllib.parse.quote(research["query"])}, 502)
+                                      "url": "https://pubmed.ncbi.nlm.nih.gov/?term=" + urllib.parse.quote(research["query"]),
+                                      "research_trace": research_trace.build_trace(
+                                          research["question"], research["query"], research["mapping"], [])}, 502)
                 out["_ms"] = int((time.time() - _t0) * 1000)
                 return self.send(out)
             if path == "/api/fulltext":
