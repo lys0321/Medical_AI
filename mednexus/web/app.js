@@ -1052,16 +1052,7 @@ async function refreshOverview() {
   try {
     overviewData = await api("/api/overview");
     renderRecent(overviewData.recent || []);
-    // 首页放浅色循证罗盘（不突兀）；星图移到个人中心，由 renderMe 挂载。
-    if (typeof renderPulse === "function") {
-      const mount = $("pulseMount");
-      if (mount) renderPulse(mount, overviewData.pulse, {
-        onInspect: (key) => {
-          const view = { evidence: "ask", mastery: "quiz", loop: "quiz", consistency: "me" }[key];
-          if (view) showView(view);
-        }
-      });
-    }
+    // 循证学习罗盘放在个人中心，由 renderMe 挂载；首页保持简洁。
     renderDataMode(overviewData.status);
     renderChecklist(overviewData);
     renderLearningPlan(overviewData.learning_plan);
@@ -1981,14 +1972,14 @@ if (quizAskForm) {
 /* ---------- 个人中心：学习数据 ---------- */
 function renderMe(data) {
   if (!data) return;
-  // 知识星图在个人中心渲染（首页已改为循证罗盘）。
-  if (typeof renderGalaxy === "function") {
-    const mount = $("galaxyMount");
-    if (mount) renderGalaxy(mount, data.galaxy, {
-      onOpen: (cid) => {
-        if (!cid) return;
-        showView("quiz", { restoreTask: false });
-        loadTask(cid, "auto");
+  // 循证学习罗盘移到个人中心；知识星图已从页面移除。
+  if (typeof renderPulse === "function") {
+    const mount = $("pulseMount");
+    if (mount) renderPulse(mount, data.pulse, {
+      onInspect: (key) => {
+        const view = { evidence: "ask", mastery: "quiz", loop: "quiz" }[key];
+        if (view) showView(view);
+        else toast("学习节奏按本机前台计时记录，数据就在当前页面下方。");
       }
     });
   }
